@@ -1,0 +1,5 @@
+Warning[205] ..\READKEYPAD.ASM 51 : Found directive in column 1. (GLOBAL)
+Message[302] ..\READKEYPAD.ASM 89 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] ..\READKEYPAD.ASM 91 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] ..\READKEYPAD.ASM 187 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] ..\READKEYPAD.ASM 189 : Register in operand not in bank 0.  Ensure that bank bits are correct.

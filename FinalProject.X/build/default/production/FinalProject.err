@@ -1,0 +1,12 @@
+Warning[205] E:\FINALPROJECT.X\FINALPROJECT.ASM 64 : Found directive in column 1. (GLOBAL)
+Warning[205] E:\FINALPROJECT.X\FINALPROJECT.ASM 66 : Found directive in column 1. (extern)
+Warning[205] E:\FINALPROJECT.X\FINALPROJECT.ASM 67 : Found directive in column 1. (extern)
+Warning[205] E:\FINALPROJECT.X\FINALPROJECT.ASM 68 : Found directive in column 1. (extern)
+Warning[205] E:\FINALPROJECT.X\FINALPROJECT.ASM 69 : Found directive in column 1. (extern)
+Warning[205] E:\FINALPROJECT.X\FINALPROJECT.ASM 70 : Found directive in column 1. (extern)
+Warning[205] E:\FINALPROJECT.X\FINALPROJECT.ASM 71 : Found directive in column 1. (extern)
+Warning[205] E:\FINALPROJECT.X\FINALPROJECT.ASM 72 : Found directive in column 1. (extern)
+Warning[205] E:\FINALPROJECT.X\FINALPROJECT.ASM 73 : Found directive in column 1. (extern)
+Message[302] E:\FINALPROJECT.X\FINALPROJECT.ASM 113 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] E:\FINALPROJECT.X\FINALPROJECT.ASM 114 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] E:\FINALPROJECT.X\FINALPROJECT.ASM 122 : Register in operand not in bank 0.  Ensure that bank bits are correct.

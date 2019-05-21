@@ -1,0 +1,900 @@
+MPASM 5.76            P16F877A_LCDWDBMOD.ASM   12-8-2017  8:08:42         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;************************************************************************
+                      00002 ;*      Microchip Technology Inc. 2004                                                                  
+                                    *
+                      00003 ;*      Assembler version: 2.0000                                                                       
+                                            *
+                      00004 ;*      Filename:                                                                                       
+                                                            *
+                      00005 ;*              p16F877A_lcd.asm                                                                        
+                                                    *
+                      00006 ;************************************************************************
+                      00007 
+                      00008         list            p=16F877A
+                      00009         #include        P16F877A.inc
+                      00001         LIST
+                      00002 
+                      00003 ;==========================================================================
+                      00004 ; Build date : Sep 19 2017
+                      00005 ;  MPASM PIC16F877A processor include
+                      00006 ; 
+                      00007 ;  (c) Copyright 1999-2017 Microchip Technology, All rights reserved
+                      00008 ;==========================================================================
+                      00009 
+                      00567         LIST
+                      00010         
+                      00011         errorlevel      -302
+                      00012 
+                      00013 
+                      00014 #define LCD_D4          PORTD, 0        ; LCD data bits
+                      00015 #define LCD_D5          PORTD, 1
+                      00016 #define LCD_D6          PORTD, 2
+                      00017 #define LCD_D7          PORTD, 3
+                      00018 
+                      00019 #define LCD_D4_DIR      TRISD, 0        ; LCD data bits
+                      00020 #define LCD_D5_DIR      TRISD, 1
+                      00021 #define LCD_D6_DIR      TRISD, 2
+                      00022 #define LCD_D7_DIR      TRISD, 3
+                      00023 
+                      00024 #define LCD_E           PORTA, 1        ; LCD E clock
+                      00025 #define LCD_RW          PORTA, 2        ; LCD read/write line
+                      00026 #define LCD_RS          PORTA, 3        ; LCD register select line
+                      00027 
+                      00028 #define LCD_E_DIR       TRISA, 1        
+                      00029 #define LCD_RW_DIR      TRISA, 2        
+                      00030 #define LCD_RS_DIR      TRISA, 3        
+                      00031 
+                      00032 #define LCD_INS         0       
+                      00033 #define LCD_DATA        1
+                      00034 
+                      00035 D_LCD_DATA      UDATA 0x20
+0020                  00036 COUNTER         res     1
+0021                  00037 delay           res     1
+0022                  00038 temp_wr         res     1
+0023                  00039 temp_rd         res     1
+MPASM 5.76            P16F877A_LCDWDBMOD.ASM   12-8-2017  8:08:42         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00040 
+  0000                00041         GLOBAL  temp_wr
+                      00042 
+                      00043 PROG1   CODE
+                      00044 
+                      00045 
+                      00046 ;***************************************************************************
+                      00047         
+0000                  00048 LCDLine_1
+0000   ???? ????      00049         banksel temp_wr
+0002   3080           00050         movlw   0x80
+0003   00??           00051         movwf   temp_wr
+0004   2???           00052         call    i_write
+0005   0008           00053         return
+  0000                00054         GLOBAL  LCDLine_1
+                      00055 
+0006                  00056 LCDLine_2
+0006   ???? ????      00057         banksel temp_wr
+0008   30C0           00058         movlw   0xC0
+0009   00??           00059         movwf   temp_wr
+000A   2???           00060         call    i_write
+000B   0008           00061         return
+  0000                00062         GLOBAL  LCDLine_2
+                      00063         
+000C                  00064 d_write                                 ;write data
+000C   2???           00065         call    LCDBusy
+000D   1403           00066         bsf     STATUS, C       
+000E   2???           00067         call    LCDWrite
+                      00068         ;banksel        TXREG                   ;move data into TXREG 
+                      00069         ;movwf  TXREG
+                      00070         ;banksel        TXSTA
+                      00071         ;btfss  TXSTA,TRMT              ;wait for data TX
+                      00072         ;goto   $-1
+000F   1283 1303      00073         banksel PORTA   
+0011   0008           00074         return
+  0000                00075         GLOBAL  d_write
+                      00076         
+0012                  00077 i_write                                 ;write instruction
+0012   2???           00078         call    LCDBusy
+0013   1003           00079         bcf     STATUS, C
+0014   2???           00080         call    LCDWrite
+0015   0008           00081         return
+  0000                00082         GLOBAL  i_write
+                      00083 
+                      00084 rlcd    macro   MYREGISTER
+                      00085  IF MYREGISTER == 1
+                      00086         bsf     STATUS, C
+                      00087         call    LCDRead
+                      00088  ELSE
+                      00089         bcf     STATUS, C
+                      00090         call    LCDRead
+                      00091  ENDIF
+                      00092         endm
+MPASM 5.76            P16F877A_LCDWDBMOD.ASM   12-8-2017  8:08:42         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00093 ;****************************************************************************
+                      00094 
+                      00095 
+                      00096 
+                      00097 
+                      00098 ; *******************************************************************
+0016                  00099 LCDInit
+0016   1283 1303      00100         banksel PORTA                   ;not sure if wdb or mc put clrf statement but
+0018   0185           00101         clrf    PORTA                   ;banksel is needed. 
+                      00102         
+0019   1683 1303      00103         banksel TRISA                   ;configure control lines
+001B   1085           00104         bcf     LCD_E_DIR
+001C   1105           00105         bcf     LCD_RW_DIR
+001D   1185           00106         bcf     LCD_RS_DIR
+                      00107         
+001E   300E           00108         movlw   b'00001110'
+001F   1683 1303      00109         banksel ADCON1
+0021   009F           00110         movwf   ADCON1  
+                      00111 
+0022   30FF           00112         movlw   0xff                    ; Wait ~15ms @ 20 MHz
+0023   ???? ????      00113         banksel COUNTER
+0025   00??           00114         movwf   COUNTER
+0026   30FF           00115         movlw   0xFF
+0027   ???? ????      00116         banksel delay
+0029   00??           00117         movwf   delay
+002A   2???           00118         call    DelayXCycles
+002B   0B??           00119         decfsz  COUNTER, F
+002C   2???           00120         goto    $-3
+                      00121         
+002D   3030           00122         movlw   b'00110000'             ;#1 Send control sequence 
+002E   00??           00123         movwf   temp_wr
+002F   1003           00124         bcf     STATUS,C
+0030   2???           00125         call    LCDWriteNibble
+                      00126 
+0031   30FF           00127         movlw   0xff                    ;Wait ~4ms @ 20 MHz
+0032   00??           00128         movwf   COUNTER
+0033   30FF           00129         movlw   0xFF
+0034   00??           00130         movwf   delay
+0035   2???           00131         call    DelayXCycles
+0036   0B??           00132         decfsz  COUNTER, F
+0037   2???           00133         goto    $-3
+                      00134 
+0038   3030           00135         movlw   b'00110000'             ;#2 Send control sequence
+0039   00??           00136         movwf   temp_wr
+003A   1003           00137         bcf     STATUS,C
+003B   2???           00138         call    LCDWriteNibble
+                      00139 
+003C   30FF           00140         movlw   0xFF                    ;Wait ~100us @ 20 MHz
+003D   00??           00141         movwf   delay
+003E   2???           00142         call    DelayXCycles
+                      00143                                                 
+003F   3018           00144         movlw   b'0011000'              ;#3 Send control sequence
+0040   00??           00145         movwf   temp_wr
+MPASM 5.76            P16F877A_LCDWDBMOD.ASM   12-8-2017  8:08:42         PAGE  4
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0041   1003           00146         bcf     STATUS,C
+0042   2???           00147         call    LCDWriteNibble
+                      00148 
+                      00149                 ;test delay
+0043   30FF           00150         movlw   0xFF                    ;Wait ~100us @ 20 MHz
+0044   00??           00151         movwf   delay
+0045   2???           00152         call    DelayXCycles
+                      00153 
+                      00154 
+0046   3020           00155         movlw   b'00100000'             ;#4 set 4-bit
+0047   00??           00156         movwf   temp_wr
+0048   1003           00157         bcf     STATUS,C
+0049   2???           00158         call    LCDWriteNibble
+                      00159 
+004A   2???           00160         call    LCDBusy                 ;Busy?
+                      00161                                 
+004B   3028           00162         movlw   b'00101000'             ;#5   Function set
+004C   00??           00163         movwf   temp_wr
+004D   2???           00164         call    i_write
+                      00165 
+004E   300D           00166         movlw   b'00001101'             ;#6  Display = ON
+004F   00??           00167         movwf   temp_wr
+0050   2???           00168         call    i_write
+                      00169                         
+0051   3001           00170         movlw   b'00000001'             ;#7   Display Clear
+0052   00??           00171         movwf   temp_wr
+0053   2???           00172         call    i_write
+                      00173 
+0054   3006           00174         movlw   b'00000110'             ;#8   Entry Mode
+0055   00??           00175         movwf   temp_wr
+0056   2???           00176         call    i_write 
+                      00177 
+0057   3080           00178         movlw   b'10000000'             ;DDRAM addresss 0000
+0058   00??           00179         movwf   temp_wr
+0059   2???           00180         call    i_write
+                      00181 
+                      00182 ;       movlw   b'00000010'             ;return home
+                      00183 ;       movwf   temp_wr
+                      00184 ;       call    i_write
+                      00185 
+                      00186 
+005A   0008           00187         return
+                      00188 
+  0000                00189         GLOBAL  LCDInit 
+                      00190 ; *******************************************************************
+                      00191 
+                      00192 
+                      00193 
+                      00194 
+                      00195 
+                      00196 
+                      00197 
+                      00198 
+MPASM 5.76            P16F877A_LCDWDBMOD.ASM   12-8-2017  8:08:42         PAGE  5
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00199 ;****************************************************************************
+                      00200 ;     _    ______________________________
+                      00201 ; RS  _>--<______________________________
+                      00202 ;     _____
+                      00203 ; RW       \_____________________________
+                      00204 ;                  __________________
+                      00205 ; E   ____________/                  \___
+                      00206 ;     _____________                ______
+                      00207 ; DB  _____________>--------------<______
+                      00208 ;
+005B                  00209 LCDWriteNibble
+005B   1C03           00210         btfss   STATUS, C               ; Set the register select
+005C   1185           00211         bcf     LCD_RS
+005D   1803           00212         btfsc   STATUS, C       
+005E   1585           00213         bsf     LCD_RS
+                      00214 
+005F   1105           00215         bcf     LCD_RW                  ; Set write mode
+                      00216 
+0060   1683 1303      00217         banksel TRISD
+0062   1008           00218         bcf     LCD_D4_DIR              ; Set data bits to outputs
+0063   1088           00219         bcf     LCD_D5_DIR
+0064   1108           00220         bcf     LCD_D6_DIR
+0065   1188           00221         bcf     LCD_D7_DIR
+                      00222 
+0066   0000           00223         NOP                             ; Small delay
+0067   0000           00224         NOP
+                      00225 
+0068   1283 1303      00226         banksel PORTA
+006A   1485           00227         bsf     LCD_E                   ; Setup to clock data
+                      00228         
+006B   1F80           00229         btfss   temp_wr, 7                      ; Set high nibble
+006C   1188           00230         bcf     LCD_D7  
+006D   1B80           00231         btfsc   temp_wr, 7
+006E   1588           00232         bsf     LCD_D7
+006F   1F00           00233         btfss   temp_wr, 6
+0070   1108           00234         bcf     LCD_D6  
+0071   1B00           00235         btfsc   temp_wr, 6
+0072   1508           00236         bsf     LCD_D6
+0073   1E80           00237         btfss   temp_wr, 5
+0074   1088           00238         bcf     LCD_D5  
+0075   1A80           00239         btfsc   temp_wr, 5
+0076   1488           00240         bsf     LCD_D5
+0077   1E00           00241         btfss   temp_wr, 4
+0078   1008           00242         bcf     LCD_D4
+0079   1A00           00243         btfsc   temp_wr, 4
+007A   1408           00244         bsf     LCD_D4  
+                      00245 
+007B   0000           00246         NOP
+007C   0000           00247         NOP
+                      00248 
+007D   1085           00249         bcf     LCD_E                   ; Send the data
+                      00250 
+007E   0008           00251         return
+MPASM 5.76            P16F877A_LCDWDBMOD.ASM   12-8-2017  8:08:42         PAGE  6
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00252 ; *******************************************************************
+                      00253 
+                      00254 
+                      00255 
+                      00256 
+                      00257 
+                      00258 ; *******************************************************************
+007F                  00259 LCDWrite
+                      00260 ;       call    LCDBusy
+007F   2???           00261         call    LCDWriteNibble
+0080   ???? ????      00262         BANKSEL temp_wr
+0082   0E??           00263         swapf   temp_wr, f
+0083   2???           00264         call    LCDWriteNibble
+0084   ???? ????      00265         banksel temp_wr
+0086   0E??           00266         swapf   temp_wr,f
+                      00267 
+0087   0008           00268         return
+                      00269 
+  0000                00270         GLOBAL  LCDWrite
+                      00271 ; *******************************************************************
+                      00272 
+                      00273 
+                      00274 
+                      00275 
+                      00276 
+                      00277 ; *******************************************************************
+                      00278 ;     _____    _____________________________________________________
+                      00279 ; RS  _____>--<_____________________________________________________
+                      00280 ;               ____________________________________________________
+                      00281 ; RW  _________/
+                      00282 ;                  ____________________      ____________________
+                      00283 ; E   ____________/                    \____/                    \__
+                      00284 ;     _________________                __________                ___
+                      00285 ; DB  _________________>--------------<__________>--------------<___
+                      00286 ;
+0088                  00287 LCDRead
+0088   1683 1303      00288         banksel TRISD
+008A   1408           00289         bsf     LCD_D4_DIR              ; Set data bits to inputs
+008B   1488           00290         bsf     LCD_D5_DIR
+008C   1508           00291         bsf     LCD_D6_DIR
+008D   1588           00292         bsf     LCD_D7_DIR              
+                      00293 
+008E   1283 1303      00294         BANKSEL PORTA
+0090   1C03           00295         btfss   STATUS, C               ; Set the register select
+0091   1185           00296         bcf     LCD_RS
+0092   1803           00297         btfsc   STATUS, C       
+0093   1585           00298         bsf     LCD_RS
+                      00299 
+0094   1505           00300         bsf     LCD_RW                  ;Read = 1
+                      00301 
+0095   0000           00302         NOP
+0096   0000           00303         NOP                     
+                      00304 
+MPASM 5.76            P16F877A_LCDWDBMOD.ASM   12-8-2017  8:08:42         PAGE  7
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0097   1485           00305         bsf     LCD_E                   ; Setup to clock data
+                      00306 
+0098   0000           00307         NOP
+0099   0000           00308         NOP
+009A   0000           00309         NOP
+009B   0000           00310         NOP
+                      00311 
+009C   1D88           00312         btfss   LCD_D7                  ; Get high nibble
+009D   1380           00313         bcf     temp_rd, 7
+009E   1988           00314         btfsc   LCD_D7
+009F   1780           00315         bsf     temp_rd, 7
+00A0   1D08           00316         btfss   LCD_D6                  
+00A1   1300           00317         bcf     temp_rd, 6
+00A2   1908           00318         btfsc   LCD_D6
+00A3   1700           00319         bsf     temp_rd, 6
+00A4   1C88           00320         btfss   LCD_D5                  
+00A5   1280           00321         bcf     temp_rd, 5
+00A6   1888           00322         btfsc   LCD_D5
+00A7   1680           00323         bsf     temp_rd, 5
+00A8   1C08           00324         btfss   LCD_D4                  
+00A9   1200           00325         bcf     temp_rd, 4
+00AA   1808           00326         btfsc   LCD_D4
+00AB   1600           00327         bsf     temp_rd, 4
+                      00328 
+00AC   1085           00329         bcf     LCD_E                   ; Finished reading the data
+                      00330 
+00AD   0000           00331         NOP
+00AE   0000           00332         NOP
+00AF   0000           00333         NOP
+00B0   0000           00334         NOP
+00B1   0000           00335         NOP
+00B2   0000           00336         NOP
+00B3   0000           00337         NOP
+00B4   0000           00338         NOP
+                      00339 
+00B5   1485           00340         bsf     LCD_E                   ; Setup to clock data
+                      00341 
+00B6   0000           00342         NOP
+00B7   0000           00343         NOP
+                      00344 
+00B8   1D88           00345         btfss   LCD_D7                  ; Get low nibble
+00B9   1180           00346         bcf     temp_rd, 3
+00BA   1988           00347         btfsc   LCD_D7
+00BB   1580           00348         bsf     temp_rd, 3
+00BC   1D08           00349         btfss   LCD_D6                  
+00BD   1100           00350         bcf     temp_rd, 2
+00BE   1908           00351         btfsc   LCD_D6
+00BF   1500           00352         bsf     temp_rd, 2
+00C0   1C88           00353         btfss   LCD_D5                  
+00C1   1080           00354         bcf     temp_rd, 1
+00C2   1888           00355         btfsc   LCD_D5
+00C3   1480           00356         bsf     temp_rd, 1
+00C4   1C08           00357         btfss   LCD_D4                  
+MPASM 5.76            P16F877A_LCDWDBMOD.ASM   12-8-2017  8:08:42         PAGE  8
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+00C5   1000           00358         bcf     temp_rd, 0
+00C6   1808           00359         btfsc   LCD_D4
+00C7   1400           00360         bsf     temp_rd, 0
+                      00361 
+00C8   1085           00362         bcf     LCD_E                   ; Finished reading the data
+                      00363 
+00C9                  00364 FinRd
+00C9   0008           00365         return
+                      00366 ; *******************************************************************
+                      00367 
+                      00368 
+                      00369 
+                      00370 
+                      00371 
+                      00372 
+                      00373 ; *******************************************************************
+00CA                  00374 LCDBusy
+                      00375                                         ; Check BF
+                      00376         rlcd    LCD_INS
+                          M  IF 0          == 1
+                          M         bsf     STATUS, C
+                          M         call    LCDRead
+                          M  ELSE
+00CA   1003               M         bcf     STATUS, C
+00CB   2???               M         call    LCDRead
+                          M  ENDIF
+00CC   1B80           00377         btfsc   temp_rd, 7
+00CD   2???           00378         goto    LCDBusy
+00CE   0008           00379         return
+                      00380 
+  0000                00381         GLOBAL  LCDBusy
+                      00382 ; *******************************************************************
+                      00383 
+                      00384 
+                      00385 
+                      00386 
+                      00387 
+                      00388 
+                      00389 ; *******************************************************************
+00CF                  00390 DelayXCycles
+00CF   0B??           00391         decfsz  delay, F
+00D0   2???           00392         goto    DelayXCycles
+00D1   0008           00393         return
+                      00394 ; *******************************************************************
+                      00395         
+                      00396 
+                      00397         END
+MPASM 5.76            P16F877A_LCDWDBMOD.ASM   12-8-2017  8:08:42         PAGE  9
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+ACKDT                             00000005
+ACKEN                             00000004
+ACKSTAT                           00000006
+ADCON0                            0000001F
+ADCON1                            0000009F
+ADCS0                             00000006
+ADCS1                             00000007
+ADCS2                             00000006
+ADDEN                             00000003
+ADFM                              00000007
+ADIE                              00000006
+ADIF                              00000006
+ADON                              00000000
+ADRESH                            0000001E
+ADRESL                            0000009E
+BCLIE                             00000003
+BCLIF                             00000003
+BF                                00000000
+BRGH                              00000002
+C                                 00000000
+C1INV                             00000004
+C1OUT                             00000006
+C2INV                             00000005
+C2OUT                             00000007
+CCP1CON                           00000017
+CCP1IE                            00000002
+CCP1IF                            00000002
+CCP1M0                            00000000
+CCP1M1                            00000001
+CCP1M2                            00000002
+CCP1M3                            00000003
+CCP1X                             00000005
+CCP1Y                             00000004
+CCP2CON                           0000001D
+CCP2IE                            00000000
+CCP2IF                            00000000
+CCP2M0                            00000000
+CCP2M1                            00000001
+CCP2M2                            00000002
+CCP2M3                            00000003
+CCP2X                             00000005
+CCP2Y                             00000004
+CCPR1                             00000015
+CCPR1H                            00000016
+CCPR1L                            00000015
+CCPR2                             0000001B
+CCPR2H                            0000001C
+CCPR2L                            0000001B
+CHS0                              00000003
+CHS1                              00000004
+CHS2                              00000005
+CIS                               00000003
+CKE                               00000006
+MPASM 5.76            P16F877A_LCDWDBMOD.ASM   12-8-2017  8:08:42         PAGE 10
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+CKP                               00000004
+CM0                               00000000
+CM1                               00000001
+CM2                               00000002
+CMCON                             0000009C
+CMIE                              00000006
+CMIF                              00000006
+COUNTER                           00000020
+CREN                              00000004
+CSRC                              00000007
+CVR0                              00000000
+CVR1                              00000001
+CVR2                              00000002
+CVR3                              00000003
+CVRCON                            0000009D
+CVREN                             00000007
+CVROE                             00000006
+CVRR                              00000005
+D                                 00000005
+DATA_ADDRESS                      00000005
+DC                                00000001
+D_A                               00000005
+D_NOT_A                           00000005
+DelayXCycles                      000000CF
+EEADR                             0000010D
+EEADRH                            0000010F
+EECON1                            0000018C
+EECON2                            0000018D
+EEDATA                            0000010C
+EEDATH                            0000010E
+EEIE                              00000004
+EEIF                              00000004
+EEPGD                             00000007
+F                                 00000001
+FERR                              00000002
+FSR                               00000004
+FinRd                             000000C9
+GCEN                              00000007
+GIE                               00000007
+GO                                00000002
+GO_DONE                           00000002
+GO_NOT_DONE                       00000002
+I2C_DATA                          00000005
+I2C_READ                          00000002
+I2C_START                         00000003
+I2C_STOP                          00000004
+IBF                               00000007
+IBOV                              00000005
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+MPASM 5.76            P16F877A_LCDWDBMOD.ASM   12-8-2017  8:08:42         PAGE 11
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+IRP                               00000007
+LCDBusy                           000000CA
+LCDInit                           00000016
+LCDLine_1                         00000000
+LCDLine_2                         00000006
+LCDRead                           00000088
+LCDWrite                          0000007F
+LCDWriteNibble                    0000005B
+LCD_D4                            PORTD, 0
+LCD_D4_DIR                        TRISD, 0
+LCD_D5                            PORTD, 1
+LCD_D5_DIR                        TRISD, 1
+LCD_D6                            PORTD, 2
+LCD_D6_DIR                        TRISD, 2
+LCD_D7                            PORTD, 3
+LCD_D7_DIR                        TRISD, 3
+LCD_DATA                          1
+LCD_E                             PORTA, 1
+LCD_E_DIR                         TRISA, 1
+LCD_INS                           0
+LCD_RS                            PORTA, 3
+LCD_RS_DIR                        TRISA, 3
+LCD_RW                            PORTA, 2
+LCD_RW_DIR                        TRISA, 2
+NOT_A                             00000005
+NOT_ADDRESS                       00000005
+NOT_BO                            00000000
+NOT_BOR                           00000000
+NOT_DONE                          00000002
+NOT_PD                            00000003
+NOT_POR                           00000001
+NOT_RBPU                          00000007
+NOT_RC8                           00000006
+NOT_T1SYNC                        00000002
+NOT_TO                            00000004
+NOT_TX8                           00000006
+NOT_W                             00000002
+NOT_WRITE                         00000002
+OBF                               00000006
+OERR                              00000001
+OPTION_REG                        00000081
+P                                 00000004
+PCFG0                             00000000
+PCFG1                             00000001
+PCFG2                             00000002
+PCFG3                             00000003
+PCL                               00000002
+PCLATH                            0000000A
+PCON                              0000008E
+PEIE                              00000006
+PEN                               00000002
+PIE1                              0000008C
+PIE2                              0000008D
+MPASM 5.76            P16F877A_LCDWDBMOD.ASM   12-8-2017  8:08:42         PAGE 12
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+PIR1                              0000000C
+PIR2                              0000000D
+PORTA                             00000005
+PORTB                             00000006
+PORTC                             00000007
+PORTD                             00000008
+PORTE                             00000009
+PR2                               00000092
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+PSPIE                             00000007
+PSPIF                             00000007
+PSPMODE                           00000004
+R                                 00000002
+RA0                               00000000
+RA1                               00000001
+RA2                               00000002
+RA3                               00000003
+RA4                               00000004
+RA5                               00000005
+RB0                               00000000
+RB1                               00000001
+RB2                               00000002
+RB3                               00000003
+RB4                               00000004
+RB5                               00000005
+RB6                               00000006
+RB7                               00000007
+RBIE                              00000003
+RBIF                              00000000
+RC0                               00000000
+RC1                               00000001
+RC2                               00000002
+RC3                               00000003
+RC4                               00000004
+RC5                               00000005
+RC6                               00000006
+RC7                               00000007
+RC8_9                             00000006
+RC9                               00000006
+RCD8                              00000000
+RCEN                              00000003
+RCIE                              00000005
+RCIF                              00000005
+RCREG                             0000001A
+RCSTA                             00000018
+RD                                00000000
+RD0                               00000000
+RD1                               00000001
+RD2                               00000002
+RD3                               00000003
+MPASM 5.76            P16F877A_LCDWDBMOD.ASM   12-8-2017  8:08:42         PAGE 13
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+RD4                               00000004
+RD5                               00000005
+RD6                               00000006
+RD7                               00000007
+RE0                               00000000
+RE1                               00000001
+RE2                               00000002
+READ_WRITE                        00000002
+RP0                               00000005
+RP1                               00000006
+RSEN                              00000001
+RX9                               00000006
+RX9D                              00000000
+R_NOT_W                           00000002
+R_W                               00000002
+S                                 00000003
+SEN                               00000000
+SMP                               00000007
+SPBRG                             00000099
+SPEN                              00000007
+SREN                              00000005
+SSPADD                            00000093
+SSPBUF                            00000013
+SSPCON                            00000014
+SSPCON2                           00000091
+SSPEN                             00000005
+SSPIE                             00000003
+SSPIF                             00000003
+SSPM0                             00000000
+SSPM1                             00000001
+SSPM2                             00000002
+SSPM3                             00000003
+SSPOV                             00000006
+SSPSTAT                           00000094
+STATUS                            00000003
+SYNC                              00000004
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+T1CKPS0                           00000004
+T1CKPS1                           00000005
+T1CON                             00000010
+T1INSYNC                          00000002
+T1OSCEN                           00000003
+T1SYNC                            00000002
+T2CKPS0                           00000000
+T2CKPS1                           00000001
+T2CON                             00000012
+TMR0                              00000001
+TMR0IE                            00000005
+TMR0IF                            00000002
+TMR1                              0000000E
+MPASM 5.76            P16F877A_LCDWDBMOD.ASM   12-8-2017  8:08:42         PAGE 14
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TMR1CS                            00000001
+TMR1H                             0000000F
+TMR1IE                            00000000
+TMR1IF                            00000000
+TMR1L                             0000000E
+TMR1ON                            00000000
+TMR2                              00000011
+TMR2IE                            00000001
+TMR2IF                            00000001
+TMR2ON                            00000002
+TOUTPS0                           00000003
+TOUTPS1                           00000004
+TOUTPS2                           00000005
+TOUTPS3                           00000006
+TRISA                             00000085
+TRISA0                            00000000
+TRISA1                            00000001
+TRISA2                            00000002
+TRISA3                            00000003
+TRISA4                            00000004
+TRISA5                            00000005
+TRISB                             00000086
+TRISB0                            00000000
+TRISB1                            00000001
+TRISB2                            00000002
+TRISB3                            00000003
+TRISB4                            00000004
+TRISB5                            00000005
+TRISB6                            00000006
+TRISB7                            00000007
+TRISC                             00000087
+TRISC0                            00000000
+TRISC1                            00000001
+TRISC2                            00000002
+TRISC3                            00000003
+TRISC4                            00000004
+TRISC5                            00000005
+TRISC6                            00000006
+TRISC7                            00000007
+TRISD                             00000088
+TRISD0                            00000000
+TRISD1                            00000001
+TRISD2                            00000002
+TRISD3                            00000003
+TRISD4                            00000004
+TRISD5                            00000005
+TRISD6                            00000006
+TRISD7                            00000007
+TRISE                             00000089
+TRISE0                            00000000
+TRISE1                            00000001
+TRISE2                            00000002
+TRMT                              00000001
+MPASM 5.76            P16F877A_LCDWDBMOD.ASM   12-8-2017  8:08:42         PAGE 15
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TX8_9                             00000006
+TX9                               00000006
+TX9D                              00000000
+TXD8                              00000000
+TXEN                              00000005
+TXIE                              00000004
+TXIF                              00000004
+TXREG                             00000019
+TXSTA                             00000098
+UA                                00000001
+W                                 00000000
+WCOL                              00000007
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_BODEN_OFF                        00003FBF
+_BODEN_ON                         00003FFF
+_BOREN_OFF                        00003FBF
+_BOREN_ON                         00003FFF
+_CONFIG                           00002007
+_CPD_OFF                          00003FFF
+_CPD_ON                           00003EFF
+_CP_ALL                           00001FFF
+_CP_OFF                           00003FFF
+_CP_ON                            00001FFF
+_DEBUG_OFF                        00003FFF
+_DEBUG_ON                         000037FF
+_DEVID1                           00002006
+_FOSC_EXTRC                       00003FFF
+_FOSC_HS                          00003FFE
+_FOSC_LP                          00003FFC
+_FOSC_XT                          00003FFD
+_HS_OSC                           00003FFE
+_IDLOC0                           00002000
+_IDLOC1                           00002001
+_IDLOC2                           00002002
+_IDLOC3                           00002003
+_LP_OSC                           00003FFC
+_LVP_OFF                          00003F7F
+_LVP_ON                           00003FFF
+_PROG1_002C                       0000002C
+_PROG1_0037                       00000037
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDTE_OFF                         00003FFB
+_WDTE_ON                          00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_WRT_1FOURTH                      00003BFF
+_WRT_256                          00003DFF
+_WRT_HALF                         000039FF
+MPASM 5.76            P16F877A_LCDWDBMOD.ASM   12-8-2017  8:08:42         PAGE 16
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+_WRT_OFF                          00003FFF
+_XT_OSC                           00003FFD
+__16F877A                         00000001
+d_write                           0000000C
+delay                             00000021
+i_write                           00000012
+rlcd                              
+temp_rd                           00000023
+temp_wr                           00000022
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     0 reported,    12 suppressed
+
+

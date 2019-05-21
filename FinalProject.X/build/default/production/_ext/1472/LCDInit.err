@@ -1,0 +1,6 @@
+Warning[205] ..\LCDINIT.ASM 56 : Found directive in column 1. (extern)
+Warning[205] ..\LCDINIT.ASM 57 : Found directive in column 1. (extern)
+Warning[205] ..\LCDINIT.ASM 58 : Found directive in column 1. (extern)
+Warning[205] ..\LCDINIT.ASM 59 : Found directive in column 1. (extern)
+Warning[205] ..\LCDINIT.ASM 60 : Found directive in column 1. (extern)
+Message[305] ..\LCDINIT.ASM 97 : Using default destination of 1 (file).

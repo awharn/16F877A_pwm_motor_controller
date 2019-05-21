@@ -1,0 +1,598 @@
+MPASM 5.76                       LCDINIT.ASM   12-8-2017  8:08:42         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;**********************************************************************
+                      00002 ;   This file is a basic code template for object module code         *
+                      00003 ;   generation on the PIC16F877A. This file contains the              *
+                      00004 ;   basic code building blocks to build upon.                         *
+                      00005 ;                                                                     *
+                      00006 ;   Refer to the MPASM User's Guide for additional information on     *
+                      00007 ;   features of the assembler and linker (Document DS33014).          *
+                      00008 ;                                                                     *
+                      00009 ;   Refer to the respective PIC data sheet for additional             *
+                      00010 ;   information on the instruction set.                               *
+                      00011 ;                                                                     *
+                      00012 ;**********************************************************************
+                      00013 ;                                                                     *
+                      00014 ;    Filename:      LCDInit.asm                                       *
+                      00015 ;    Date:          11/25/17                                          *
+                      00016 ;    File Version:  0.0.1                                             *
+                      00017 ;                                                                     *
+                      00018 ;    Author:        Andrew W. Harn                                    *
+                      00019 ;    Company:       Geneva College                                    *
+                      00020 ;                                                                     * 
+                      00021 ;                                                                     *
+                      00022 ;**********************************************************************
+                      00023 ;                                                                     *
+                      00024 ;    Files required: P16F877A.INC                                     *
+                      00025 ;                    P16F877A_LCDWDBMOD.ASM                           *
+                      00026 ;                                                                     *   
+                      00027 ;                                                                     *
+                      00028 ;                                                                     *
+                      00029 ;**********************************************************************
+                      00030 ;                                                                     *
+                      00031 ;    Notes:                                                           *
+                      00032 ;                                                                     *
+                      00033 ;                                                                     *
+                      00034 ;                                                                     *
+                      00035 ;                                                                     *
+                      00036 ;**********************************************************************
+                      00037  
+                      00038         list            p=16F877A
+                      00039         #include        P16F877A.inc
+                      00001         LIST
+                      00002 
+                      00003 ;==========================================================================
+                      00004 ; Build date : Sep 19 2017
+                      00005 ;  MPASM PIC16F877A processor include
+                      00006 ; 
+                      00007 ;  (c) Copyright 1999-2017 Microchip Technology, All rights reserved
+                      00008 ;==========================================================================
+                      00009 
+                      00567         LIST
+                      00040         
+                      00041 ;***** VARIABLE DEFINITIONS (examples)
+                      00042  
+                      00043 ; example of using Shared Uninitialized Data Section
+MPASM 5.76                       LCDINIT.ASM   12-8-2017  8:08:42         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00044 INT_VAR     UDATA_SHR
+                      00045  
+                      00046 ; example of using Uninitialized Data Section
+                      00047 TEMP_VAR    UDATA           ; explicit address specified is not required
+0000                  00048 temp_count  RES     1
+                      00049 
+                      00050 G_DATA      UDATA_OVR       ; explicit address can be specified
+0000                  00051 flag        RES 2           ; temporary variable (shared locations - G_DATA)
+                      00052  
+                      00053 G_DATA      UDATA_OVR   
+0000                  00054 count       RES 2           ; temporary variable (shared locations - G_DATA)
+                      00055 
+Warning[205]: Found directive in column 1. (extern)
+  0000                00056 extern  LCDInit             ; Function - Initializes LCD
+Warning[205]: Found directive in column 1. (extern)
+  0000                00057 extern  i_write             ; Function - Writes instruction to LCD
+Warning[205]: Found directive in column 1. (extern)
+  0000                00058 extern  d_write             ; Function - Writes data to LCD 
+Warning[205]: Found directive in column 1. (extern)
+  0000                00059 extern  LCDLine_2           ; Function - Moves LCD cursor to second line
+Warning[205]: Found directive in column 1. (extern)
+  0000                00060 extern  temp_wr             ; Variable - Temporary Working Register
+                      00061 ;**********************************************************************
+                      00062 
+                      00063 MAIN       CODE
+                      00064 
+0000                  00065 InitLCD
+0000   ???? ????      00066         pagesel LCDInit         ; Initialize LCD and blank the display
+0002   2???           00067         call    LCDInit 
+0003   ???? ????      00068         banksel temp_wr 
+0005   3001           00069         movlw   0x01    
+0006   00??           00070         movwf   temp_wr 
+0007   ???? ????      00071         pagesel i_write
+0009   2???           00072         call    i_write
+                      00073 
+000A   ???? ????      00074         banksel temp_count      
+000C   01??           00075         clrf    temp_count
+                      00076         
+  0000                00077         GLOBAL  InitLCD
+                      00078         
+000D                  00079 loop    
+000D   08??           00080         movf    temp_count,W    ;load working register with table index
+000E   ???? ????      00081         pagesel Msg_Lookup      
+0010   2???           00082         call    Msg_Lookup      ;returns character in Wreg
+0011   ???? ????      00083         banksel temp_wr
+0013   00??           00084         movwf   temp_wr
+0014   08??           00085         movf    temp_wr,F       ;see if the next character to write is the null character
+0015   ???? ????      00086         pagesel ExitLoop        ;pagesel uses bcf and bsf on plcath that does not change state of Z bit
+0017   1903           00087         btfsc   STATUS,Z        ;test to see if null character is returned
+0018   2???           00088         goto    ExitLoop        ;if it is null then exit the loop
+0019   ???? ????      00089         pagesel d_write
+001B   2???           00090         call    d_write         ;write the value in temp_wr to DDRAM in the display 
+001C   ???? ????      00091         banksel temp_count
+MPASM 5.76                       LCDINIT.ASM   12-8-2017  8:08:42         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+001E   300F           00092         movlw   d'15'
+001F   02??           00093         subwf   temp_count,W ; if the 16 character then skp to the second line
+0020   ???? ????      00094         pagesel LCDLine_2
+0022   1903           00095         btfsc   STATUS,Z        ;if zero then set cursor to the seond line
+0023   2???           00096         call    LCDLine_2
+Message[305]: Using default destination of 1 (file).
+0024   0A??           00097         incf    temp_count      ;keeps track of the position that is being written.
+0025   ???? ????      00098         pagesel loop    
+0027   2???           00099         goto    loop
+                      00100         
+0028                  00101 ExitLoop
+0028   ???? ????      00102        banksel  temp_wr         ; Get the pesky flashing cursor off of the screen
+002A   3090           00103        movlw    0x90
+002B   00??           00104        movwf    temp_wr
+002C   ???? ????      00105        pagesel  i_write
+002E   2???           00106        call     i_write
+002F   0008           00107        return                   
+                      00108 ;**************** subroutines **********************************
+0030                  00109 Msg_Lookup              ;subroutine is entered with index value in Wreg
+0030   ???? ????      00110         banksel count
+0032   00??           00111         movwf   count
+0033   ???? ????      00112         pageselw Msg_Table  ;Special assembly directive used 'pageselw' so that 
+                      00113                                                 ;all 5 upper bits are written. 
+                      00114                                                 ;Get the byte read and use it to
+0035   30??           00115         movlw Msg_Table     ;index into our jump table. If
+0036   07??           00116         addwf count,w       ;we crossed a 256-byte boundary,
+0037   1803           00117         btfsc STATUS,C                ;then increment PCLATH. Then load the
+0038   0A8A           00118         incf PCLATH,f                 ;program counter with computed goto.
+0039   0082           00119         movwf PCL
+                      00120         
+003A                  00121 Msg_Table
+003A   3450           00122         retlw   'P'     ;0
+003B   3445           00123         retlw   'E'     ;1
+003C   3452           00124         retlw   'R'     ;2
+003D   3443           00125         retlw   'C'     ;3
+003E   3445           00126         retlw   'E'     ;4
+003F   344E           00127         retlw   'N'     ;5
+0040   3454           00128         retlw   'T'     ;6
+0041   3420           00129         retlw   ' '     ;7
+0042   3444           00130         retlw   'D'     ;8
+0043   3452           00131         retlw   'R'     ;9
+0044   3449           00132         retlw   'I'     ;10
+0045   3456           00133         retlw   'V'     ;11
+0046   3445           00134         retlw   'E'     ;12
+0047   3420           00135         retlw   ' '     ;13
+0048   3430           00136         retlw   '0'     ;14
+0049   3430           00137         retlw   '0'     ;15
+004A   3452           00138         retlw   'R'     ;16
+004B   3450           00139         retlw   'P'     ;17
+004C   344D           00140         retlw   'M'     ;18
+004D   3420           00141         retlw   ' '     ;19
+004E   343D           00142         retlw   '='     ;20
+004F   3420           00143         retlw   ' '     ;21
+MPASM 5.76                       LCDINIT.ASM   12-8-2017  8:08:42         PAGE  4
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0050   3430           00144         retlw   '0'     ;22
+0051   342E           00145         retlw   '.'     ;23
+0052   3430           00146         retlw   '0'     ;24
+0053   3420           00147         retlw   ' '     ;25
+0054   3420           00148         retlw   ' '     ;26
+0055   3400           00149         retlw   0       ;null character is a flag that the string is done. 
+                      00150 
+                      00151     END                       ; directive 'end of program'
+MPASM 5.76                       LCDINIT.ASM   12-8-2017  8:08:42         PAGE  5
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+ACKDT                             00000005
+ACKEN                             00000004
+ACKSTAT                           00000006
+ADCON0                            0000001F
+ADCON1                            0000009F
+ADCS0                             00000006
+ADCS1                             00000007
+ADCS2                             00000006
+ADDEN                             00000003
+ADFM                              00000007
+ADIE                              00000006
+ADIF                              00000006
+ADON                              00000000
+ADRESH                            0000001E
+ADRESL                            0000009E
+BCLIE                             00000003
+BCLIF                             00000003
+BF                                00000000
+BRGH                              00000002
+C                                 00000000
+C1INV                             00000004
+C1OUT                             00000006
+C2INV                             00000005
+C2OUT                             00000007
+CCP1CON                           00000017
+CCP1IE                            00000002
+CCP1IF                            00000002
+CCP1M0                            00000000
+CCP1M1                            00000001
+CCP1M2                            00000002
+CCP1M3                            00000003
+CCP1X                             00000005
+CCP1Y                             00000004
+CCP2CON                           0000001D
+CCP2IE                            00000000
+CCP2IF                            00000000
+CCP2M0                            00000000
+CCP2M1                            00000001
+CCP2M2                            00000002
+CCP2M3                            00000003
+CCP2X                             00000005
+CCP2Y                             00000004
+CCPR1                             00000015
+CCPR1H                            00000016
+CCPR1L                            00000015
+CCPR2                             0000001B
+CCPR2H                            0000001C
+CCPR2L                            0000001B
+CHS0                              00000003
+CHS1                              00000004
+CHS2                              00000005
+CIS                               00000003
+CKE                               00000006
+MPASM 5.76                       LCDINIT.ASM   12-8-2017  8:08:42         PAGE  6
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+CKP                               00000004
+CM0                               00000000
+CM1                               00000001
+CM2                               00000002
+CMCON                             0000009C
+CMIE                              00000006
+CMIF                              00000006
+CREN                              00000004
+CSRC                              00000007
+CVR0                              00000000
+CVR1                              00000001
+CVR2                              00000002
+CVR3                              00000003
+CVRCON                            0000009D
+CVREN                             00000007
+CVROE                             00000006
+CVRR                              00000005
+D                                 00000005
+DATA_ADDRESS                      00000005
+DC                                00000001
+D_A                               00000005
+D_NOT_A                           00000005
+EEADR                             0000010D
+EEADRH                            0000010F
+EECON1                            0000018C
+EECON2                            0000018D
+EEDATA                            0000010C
+EEDATH                            0000010E
+EEIE                              00000004
+EEIF                              00000004
+EEPGD                             00000007
+ExitLoop                          00000028
+F                                 00000001
+FERR                              00000002
+FSR                               00000004
+GCEN                              00000007
+GIE                               00000007
+GO                                00000002
+GO_DONE                           00000002
+GO_NOT_DONE                       00000002
+I2C_DATA                          00000005
+I2C_READ                          00000002
+I2C_START                         00000003
+I2C_STOP                          00000004
+IBF                               00000007
+IBOV                              00000005
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+InitLCD                           00000000
+MPASM 5.76                       LCDINIT.ASM   12-8-2017  8:08:42         PAGE  7
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+LCDInit                           00000000
+LCDLine_2                         00000000
+Msg_Lookup                        00000030
+Msg_Table                         0000003A
+NOT_A                             00000005
+NOT_ADDRESS                       00000005
+NOT_BO                            00000000
+NOT_BOR                           00000000
+NOT_DONE                          00000002
+NOT_PD                            00000003
+NOT_POR                           00000001
+NOT_RBPU                          00000007
+NOT_RC8                           00000006
+NOT_T1SYNC                        00000002
+NOT_TO                            00000004
+NOT_TX8                           00000006
+NOT_W                             00000002
+NOT_WRITE                         00000002
+OBF                               00000006
+OERR                              00000001
+OPTION_REG                        00000081
+P                                 00000004
+PCFG0                             00000000
+PCFG1                             00000001
+PCFG2                             00000002
+PCFG3                             00000003
+PCL                               00000002
+PCLATH                            0000000A
+PCON                              0000008E
+PEIE                              00000006
+PEN                               00000002
+PIE1                              0000008C
+PIE2                              0000008D
+PIR1                              0000000C
+PIR2                              0000000D
+PORTA                             00000005
+PORTB                             00000006
+PORTC                             00000007
+PORTD                             00000008
+PORTE                             00000009
+PR2                               00000092
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+PSPIE                             00000007
+PSPIF                             00000007
+PSPMODE                           00000004
+R                                 00000002
+RA0                               00000000
+RA1                               00000001
+RA2                               00000002
+RA3                               00000003
+MPASM 5.76                       LCDINIT.ASM   12-8-2017  8:08:42         PAGE  8
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+RA4                               00000004
+RA5                               00000005
+RB0                               00000000
+RB1                               00000001
+RB2                               00000002
+RB3                               00000003
+RB4                               00000004
+RB5                               00000005
+RB6                               00000006
+RB7                               00000007
+RBIE                              00000003
+RBIF                              00000000
+RC0                               00000000
+RC1                               00000001
+RC2                               00000002
+RC3                               00000003
+RC4                               00000004
+RC5                               00000005
+RC6                               00000006
+RC7                               00000007
+RC8_9                             00000006
+RC9                               00000006
+RCD8                              00000000
+RCEN                              00000003
+RCIE                              00000005
+RCIF                              00000005
+RCREG                             0000001A
+RCSTA                             00000018
+RD                                00000000
+RD0                               00000000
+RD1                               00000001
+RD2                               00000002
+RD3                               00000003
+RD4                               00000004
+RD5                               00000005
+RD6                               00000006
+RD7                               00000007
+RE0                               00000000
+RE1                               00000001
+RE2                               00000002
+READ_WRITE                        00000002
+RP0                               00000005
+RP1                               00000006
+RSEN                              00000001
+RX9                               00000006
+RX9D                              00000000
+R_NOT_W                           00000002
+R_W                               00000002
+S                                 00000003
+SEN                               00000000
+SMP                               00000007
+SPBRG                             00000099
+SPEN                              00000007
+MPASM 5.76                       LCDINIT.ASM   12-8-2017  8:08:42         PAGE  9
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+SREN                              00000005
+SSPADD                            00000093
+SSPBUF                            00000013
+SSPCON                            00000014
+SSPCON2                           00000091
+SSPEN                             00000005
+SSPIE                             00000003
+SSPIF                             00000003
+SSPM0                             00000000
+SSPM1                             00000001
+SSPM2                             00000002
+SSPM3                             00000003
+SSPOV                             00000006
+SSPSTAT                           00000094
+STATUS                            00000003
+SYNC                              00000004
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+T1CKPS0                           00000004
+T1CKPS1                           00000005
+T1CON                             00000010
+T1INSYNC                          00000002
+T1OSCEN                           00000003
+T1SYNC                            00000002
+T2CKPS0                           00000000
+T2CKPS1                           00000001
+T2CON                             00000012
+TMR0                              00000001
+TMR0IE                            00000005
+TMR0IF                            00000002
+TMR1                              0000000E
+TMR1CS                            00000001
+TMR1H                             0000000F
+TMR1IE                            00000000
+TMR1IF                            00000000
+TMR1L                             0000000E
+TMR1ON                            00000000
+TMR2                              00000011
+TMR2IE                            00000001
+TMR2IF                            00000001
+TMR2ON                            00000002
+TOUTPS0                           00000003
+TOUTPS1                           00000004
+TOUTPS2                           00000005
+TOUTPS3                           00000006
+TRISA                             00000085
+TRISA0                            00000000
+TRISA1                            00000001
+TRISA2                            00000002
+TRISA3                            00000003
+TRISA4                            00000004
+MPASM 5.76                       LCDINIT.ASM   12-8-2017  8:08:42         PAGE 10
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TRISA5                            00000005
+TRISB                             00000086
+TRISB0                            00000000
+TRISB1                            00000001
+TRISB2                            00000002
+TRISB3                            00000003
+TRISB4                            00000004
+TRISB5                            00000005
+TRISB6                            00000006
+TRISB7                            00000007
+TRISC                             00000087
+TRISC0                            00000000
+TRISC1                            00000001
+TRISC2                            00000002
+TRISC3                            00000003
+TRISC4                            00000004
+TRISC5                            00000005
+TRISC6                            00000006
+TRISC7                            00000007
+TRISD                             00000088
+TRISD0                            00000000
+TRISD1                            00000001
+TRISD2                            00000002
+TRISD3                            00000003
+TRISD4                            00000004
+TRISD5                            00000005
+TRISD6                            00000006
+TRISD7                            00000007
+TRISE                             00000089
+TRISE0                            00000000
+TRISE1                            00000001
+TRISE2                            00000002
+TRMT                              00000001
+TX8_9                             00000006
+TX9                               00000006
+TX9D                              00000000
+TXD8                              00000000
+TXEN                              00000005
+TXIE                              00000004
+TXIF                              00000004
+TXREG                             00000019
+TXSTA                             00000098
+UA                                00000001
+W                                 00000000
+WCOL                              00000007
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_BODEN_OFF                        00003FBF
+_BODEN_ON                         00003FFF
+_BOREN_OFF                        00003FBF
+_BOREN_ON                         00003FFF
+MPASM 5.76                       LCDINIT.ASM   12-8-2017  8:08:42         PAGE 11
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+_CONFIG                           00002007
+_CPD_OFF                          00003FFF
+_CPD_ON                           00003EFF
+_CP_ALL                           00001FFF
+_CP_OFF                           00003FFF
+_CP_ON                            00001FFF
+_DEBUG_OFF                        00003FFF
+_DEBUG_ON                         000037FF
+_DEVID1                           00002006
+_FOSC_EXTRC                       00003FFF
+_FOSC_HS                          00003FFE
+_FOSC_LP                          00003FFC
+_FOSC_XT                          00003FFD
+_HS_OSC                           00003FFE
+_IDLOC0                           00002000
+_IDLOC1                           00002001
+_IDLOC2                           00002002
+_IDLOC3                           00002003
+_LP_OSC                           00003FFC
+_LVP_OFF                          00003F7F
+_LVP_ON                           00003FFF
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDTE_OFF                         00003FFB
+_WDTE_ON                          00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_WRT_1FOURTH                      00003BFF
+_WRT_256                          00003DFF
+_WRT_HALF                         000039FF
+_WRT_OFF                          00003FFF
+_XT_OSC                           00003FFD
+__16F877A                         00000001
+count                             00000000
+d_write                           00000000
+flag                              00000000
+i_write                           00000000
+loop                              0000000D
+temp_count                        00000000
+temp_wr                           00000000
+
+Errors   :     0
+Warnings :     5 reported,     0 suppressed
+Messages :     1 reported,     0 suppressed
+
+

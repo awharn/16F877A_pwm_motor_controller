@@ -1,0 +1,701 @@
+MPASM 5.76                    READKEYPAD.ASM   12-8-2017  8:08:42         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;**********************************************************************
+                      00002 ;   This file is a basic code template for object module code         *
+                      00003 ;   generation on the PIC16F877A. This file contains the              *
+                      00004 ;   basic code building blocks to build upon.                         *
+                      00005 ;                                                                     *
+                      00006 ;   Refer to the MPASM User's Guide for additional information on     *
+                      00007 ;   features of the assembler and linker (Document DS33014).          *
+                      00008 ;                                                                     *
+                      00009 ;   Refer to the respective PIC data sheet for additional             *
+                      00010 ;   information on the instruction set.                               *
+                      00011 ;                                                                     *
+                      00012 ;**********************************************************************
+                      00013 ;                                                                     *
+                      00014 ;    Filename:      ReadKeypad.asm                                    *
+                      00015 ;    Date:          11/24/17                                          *
+                      00016 ;    File Version:  0.0.1                                             *
+                      00017 ;                                                                     *
+                      00018 ;    Author:        Andrew W. Harn                                    *
+                      00019 ;    Company:       Geneva College                                    *
+                      00020 ;                                                                     * 
+                      00021 ;                                                                     *
+                      00022 ;**********************************************************************
+                      00023 ;                                                                     *
+                      00024 ;    Files required: P16F877A.INC                                     *
+                      00025 ;                                                                             *   
+                      00026 ;                                                                     *
+                      00027 ;                                                                     *
+                      00028 ;**********************************************************************
+                      00029 ;                                                                     *
+                      00030 ;    Notes:                                                           *
+                      00031 ;                                                                     *
+                      00032 ;                                                                     *
+                      00033 ;                                                                     *
+                      00034 ;                                                                     *
+                      00035 ;**********************************************************************
+                      00036  
+                      00037         list            p=16F877A
+                      00038         #include        P16F877A.inc
+                      00001         LIST
+                      00002 
+                      00003 ;==========================================================================
+                      00004 ; Build date : Sep 19 2017
+                      00005 ;  MPASM PIC16F877A processor include
+                      00006 ; 
+                      00007 ;  (c) Copyright 1999-2017 Microchip Technology, All rights reserved
+                      00008 ;==========================================================================
+                      00009 
+                      00567         LIST
+                      00039  
+                      00040 ;***** VARIABLE DEFINITIONS (examples)
+                      00041  
+                      00042 ; example of using Shared Uninitialized Data Section
+                      00043 INT_VAR     UDATA_SHR
+MPASM 5.76                    READKEYPAD.ASM   12-8-2017  8:08:42         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0000                  00044 pattern     RES        1
+                      00045  
+                      00046 ; example of using Uninitialized Data Section
+                      00047 TEMP_VAR    UDATA           ; explicit address specified is not required
+0000                  00048 ASCII       RES        1
+0001                  00049 add         RES        1
+                      00050 
+Warning[205]: Found directive in column 1. (GLOBAL)
+  0000                00051 GLOBAL          ASCII
+                      00052 ;**********************************************************************
+                      00053 
+                      00054 MAIN       CODE
+                      00055  
+0000                  00056 read
+0000   01??           00057         clrf    pattern
+0001   ???? ????      00058         banksel ASCII
+0003   01??           00059         clrf    ASCII
+0004   ???? ????      00060         pagesel kpreset        ; Prepare keypad for use
+0006   2???           00061         call    kpreset
+  0000                00062         GLOBAL  read
+                      00063     
+0007                  00064 loop
+0007   ???? ????      00065     pagesel kpread
+0009   1283 1303      00066     banksel PORTC
+000B   0187           00067     clrf    PORTC
+000C   1D87           00068     btfss   PORTC,3        ; Start reading if rows are pressed
+000D   2???           00069     goto    kpread 
+000E   1E07           00070     btfss   PORTC,4
+000F   2???           00071     goto    kpread
+0010   1E87           00072     btfss   PORTC,5
+0011   2???           00073     goto    kpread
+0012   1F07           00074     btfss   PORTC,6
+0013   2???           00075     goto    kpread
+0014   ???? ????      00076     pagesel loop        ; Go back to looping if nothing happened
+0016   2???           00077     goto    loop        
+                      00078     
+0017                  00079 kpread
+0017   1283 1303      00080     banksel PORTC
+0019   3000           00081     movlw   0x00
+001A   0087           00082     movwf   PORTC
+001B   0089           00083     movwf   PORTE
+001C   0807           00084     movfw   PORTC        ; Read Port C value, this will be row pattern
+001D   3978           00085     andlw   B'01111000'     ; Ensure unwanted bits are suppressed
+001E   00??           00086     movwf   pattern
+001F   1683 1303      00087     banksel TRISC
+0021   3000           00088     movlw   B'00000000'
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0022   0087           00089     movwf   TRISC
+0023   3007           00090     movlw   B'00000111'
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0024   0089           00091     movwf   TRISE
+0025   1283 1303      00092     banksel PORTC
+0027   3000           00093     movlw   00
+MPASM 5.76                    READKEYPAD.ASM   12-8-2017  8:08:42         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0028   0087           00094     movwf   PORTC        ; Ensure output values still zero
+0029   0089           00095     movwf   PORTE
+002A   0809           00096     movfw   PORTE        ; Read Port C value, this will be column pattern
+002B   3907           00097     andlw   B'00000111'     ; Ensure unwanted bits are suppressed
+002C   04??           00098     iorwf   pattern,1        ; OR those results into the pattern
+                      00099     
+002D                  00100 convert     
+002D   ???? ????      00101     banksel    add
+002F   01??           00102     clrf       add
+0030   ???? ????      00103     pagesel    kp1
+0032   1B00           00104     btfsc      pattern,6
+0033   2???           00105     goto       kp1
+0034   ???? ????      00106     pagesel    col_find
+0036   2???           00107     goto       col_find        ; Here if row 1, kpad_add stays as is
+                      00108     
+0037                  00109 kp1
+0037   ???? ????      00110     pagesel    kp2
+0039   1A80           00111     btfsc      pattern,5
+003A   2???           00112     goto       kp2
+003B   3004           00113     movlw      B'00000100'        ; Here if row 2
+003C   ???? ????      00114     banksel    add
+003E   04??           00115     iorwf      add,1            ; Form table address
+003F   ???? ????      00116     pagesel    col_find
+0041   2???           00117     goto       col_find
+                      00118     
+0042                  00119 kp2
+0042   ???? ????      00120     pagesel    kp3
+0044   1A00           00121     btfsc      pattern,4
+0045   2???           00122     goto       kp3
+0046   3008           00123     movlw      B'00001000'        ; Here if row 3
+0047   ???? ????      00124     banksel    add
+0049   04??           00125     iorwf      add,1            ; Form table address
+004A   ???? ????      00126     pagesel    col_find
+004C   2???           00127     goto       col_find
+                      00128     
+004D                  00129 kp3
+004D   ???? ????      00130     pagesel    kp4
+004F   1980           00131     btfsc      pattern,3
+0050   2???           00132     goto       kp4
+0051   300C           00133     movlw      B'00001100'        ; Here if row 4
+0052   ???? ????      00134     banksel    add
+0054   04??           00135     iorwf      add,1            ; Form table address
+0055   ???? ????      00136     pagesel    col_find
+0057   2???           00137     goto       col_find
+                      00138     
+0058                  00139 kp4
+0058   3010           00140     movlw      D'16'            ; No row detected, return "E" via Table
+0059   ???? ????      00141     pagesel    keypad_op
+005B   2???           00142     goto       keypad_op
+                      00143     
+005C                  00144 col_find     
+005C   ???? ????      00145     pagesel    cf1
+005E   1900           00146     btfsc      pattern,2
+MPASM 5.76                    READKEYPAD.ASM   12-8-2017  8:08:42         PAGE  4
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+005F   2???           00147     goto       cf1
+0060   ???? ????      00148     pagesel    keypad_op
+0062   2???           00149     goto       keypad_op        ; Here if column 1, kpad_add stays as is
+                      00150     
+0063                  00151 cf1
+0063   ???? ????      00152     pagesel    cf2
+0065   1880           00153     btfsc      pattern,1
+0066   2???           00154     goto       cf2
+0067   3001           00155     movlw      B'00000001'        ; Here if column 2
+0068   ???? ????      00156     banksel    add
+006A   04??           00157     iorwf      add,1            ; Form table address
+006B   ???? ????      00158     pagesel    keypad_op
+006D   2???           00159     goto       keypad_op
+                      00160  
+006E                  00161 cf2        
+006E   3002           00162     movlw      B'00000010'            
+006F   ???? ????      00163     banksel    add
+0071   04??           00164     iorwf      add,1            ; Form table address    
+                      00165     
+0072                  00166 keypad_op     
+0072   ???? ????      00167     banksel    add
+0074   08??           00168     movf       add,0
+0075   ???? ????      00169     pagesel    kplookup
+0077   2???           00170     call       kplookup
+0078   ???? ????      00171     banksel    ASCII
+007A   00??           00172     movwf      ASCII            ; Save the character
+007B   ???? ????      00173     pagesel    rst
+007D   2???           00174     goto       rst            
+                      00175     
+007E                  00176 rst                    ; Reset and go back to loop 
+007E   01??           00177     clrf       pattern
+007F   ???? ????      00178     pagesel    wait
+0081   2???           00179     call       wait
+0082   ???? ????      00180     pagesel    kpreset
+0084   2???           00181     call       kpreset
+0085   0008           00182         return
+                      00183     
+0086                  00184 kpreset
+0086   1683 1303      00185     banksel    TRISC
+0088   3078           00186     movlw      b'01111000'            ; Read columns
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0089   0087           00187     movwf      TRISC
+008A   3000           00188     movlw      b'00000000'
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+008B   0089           00189     movwf      TRISE
+008C   1283 1303      00190     banksel    PORTC
+008E   3000           00191     movlw      0x00
+008F   0087           00192     movwf      PORTC            ; Make sure outputs are off
+0090   0089           00193     movwf      PORTE
+0091   0008           00194     return
+                      00195     
+0092                  00196 wait
+0092   ???? ????      00197     pagesel    kpreset            ; Wait until all buttons are not pressed.
+MPASM 5.76                    READKEYPAD.ASM   12-8-2017  8:08:42         PAGE  5
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0094   2???           00198     call       kpreset
+0095   1283 1303      00199     banksel    PORTC
+0097   ???? ????      00200     pagesel    wait
+0099   1D87           00201     btfss      PORTC,3        
+009A   2???           00202     goto       wait
+009B   1E07           00203     btfss      PORTC,4
+009C   2???           00204     goto       wait
+009D   1E87           00205     btfss      PORTC,5
+009E   2???           00206     goto       wait
+009F   1F07           00207     btfss      PORTC,6
+00A0   2???           00208     goto       wait
+00A1   0008           00209     return
+                      00210     
+00A2                  00211 kplookup            
+00A2   ???? ????      00212     banksel    add
+00A4   08??           00213     movfw      add
+00A5   ???? ????      00214     pageselw   kp_table        ;Special assembly directive used 'pageselw' so that 
+                      00215                          ;all 5 upper bits are written. 
+                      00216                         ;Get the byte read and use it to
+00A7   30??           00217     movlw      kp_table        ;index into our jump table. If
+00A8   07??           00218     addwf      add,w        ;we crossed a 256-byte boundary,
+00A9   1803           00219     btfsc      STATUS,C                ;then increment PCLATH. Then load the
+00AA   0A8A           00220     incf       PCLATH,f                 ;program counter with computed goto.
+00AB   0082           00221     movwf      PCL    
+                      00222     
+00AC                  00223 kp_table
+00AC   3431           00224     retlw    0x31        ;row 1
+00AD   3432           00225     retlw    0x32
+00AE   3433           00226     retlw    0x33
+00AF   3480           00227     retlw    0x80        ;Error code
+00B0   3434           00228     retlw    0x34        ;row 2
+00B1   3435           00229     retlw    0x35
+00B2   3436           00230     retlw    0x36
+00B3   3480           00231     retlw    0x80        ;Error code
+00B4   3437           00232     retlw    0x37        ;row 3
+00B5   3438           00233     retlw    0x38
+00B6   3439           00234     retlw    0x39
+00B7   3480           00235     retlw    0x80        ;Error code
+00B8   342A           00236     retlw    0x2A        ;row 4
+00B9   3430           00237     retlw    0x30
+00BA   3423           00238     retlw    0x23
+00BB   3480           00239     retlw    0x80        ;Error code
+00BC   3480           00240     retlw    0x80        ;Error code
+                      00241     
+                      00242     END                       ; directive 'end of program'
+MPASM 5.76                    READKEYPAD.ASM   12-8-2017  8:08:42         PAGE  6
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+ACKDT                             00000005
+ACKEN                             00000004
+ACKSTAT                           00000006
+ADCON0                            0000001F
+ADCON1                            0000009F
+ADCS0                             00000006
+ADCS1                             00000007
+ADCS2                             00000006
+ADDEN                             00000003
+ADFM                              00000007
+ADIE                              00000006
+ADIF                              00000006
+ADON                              00000000
+ADRESH                            0000001E
+ADRESL                            0000009E
+ASCII                             00000000
+BCLIE                             00000003
+BCLIF                             00000003
+BF                                00000000
+BRGH                              00000002
+C                                 00000000
+C1INV                             00000004
+C1OUT                             00000006
+C2INV                             00000005
+C2OUT                             00000007
+CCP1CON                           00000017
+CCP1IE                            00000002
+CCP1IF                            00000002
+CCP1M0                            00000000
+CCP1M1                            00000001
+CCP1M2                            00000002
+CCP1M3                            00000003
+CCP1X                             00000005
+CCP1Y                             00000004
+CCP2CON                           0000001D
+CCP2IE                            00000000
+CCP2IF                            00000000
+CCP2M0                            00000000
+CCP2M1                            00000001
+CCP2M2                            00000002
+CCP2M3                            00000003
+CCP2X                             00000005
+CCP2Y                             00000004
+CCPR1                             00000015
+CCPR1H                            00000016
+CCPR1L                            00000015
+CCPR2                             0000001B
+CCPR2H                            0000001C
+CCPR2L                            0000001B
+CHS0                              00000003
+CHS1                              00000004
+CHS2                              00000005
+CIS                               00000003
+MPASM 5.76                    READKEYPAD.ASM   12-8-2017  8:08:42         PAGE  7
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+CKE                               00000006
+CKP                               00000004
+CM0                               00000000
+CM1                               00000001
+CM2                               00000002
+CMCON                             0000009C
+CMIE                              00000006
+CMIF                              00000006
+CREN                              00000004
+CSRC                              00000007
+CVR0                              00000000
+CVR1                              00000001
+CVR2                              00000002
+CVR3                              00000003
+CVRCON                            0000009D
+CVREN                             00000007
+CVROE                             00000006
+CVRR                              00000005
+D                                 00000005
+DATA_ADDRESS                      00000005
+DC                                00000001
+D_A                               00000005
+D_NOT_A                           00000005
+EEADR                             0000010D
+EEADRH                            0000010F
+EECON1                            0000018C
+EECON2                            0000018D
+EEDATA                            0000010C
+EEDATH                            0000010E
+EEIE                              00000004
+EEIF                              00000004
+EEPGD                             00000007
+F                                 00000001
+FERR                              00000002
+FSR                               00000004
+GCEN                              00000007
+GIE                               00000007
+GO                                00000002
+GO_DONE                           00000002
+GO_NOT_DONE                       00000002
+I2C_DATA                          00000005
+I2C_READ                          00000002
+I2C_START                         00000003
+I2C_STOP                          00000004
+IBF                               00000007
+IBOV                              00000005
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+NOT_A                             00000005
+MPASM 5.76                    READKEYPAD.ASM   12-8-2017  8:08:42         PAGE  8
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+NOT_ADDRESS                       00000005
+NOT_BO                            00000000
+NOT_BOR                           00000000
+NOT_DONE                          00000002
+NOT_PD                            00000003
+NOT_POR                           00000001
+NOT_RBPU                          00000007
+NOT_RC8                           00000006
+NOT_T1SYNC                        00000002
+NOT_TO                            00000004
+NOT_TX8                           00000006
+NOT_W                             00000002
+NOT_WRITE                         00000002
+OBF                               00000006
+OERR                              00000001
+OPTION_REG                        00000081
+P                                 00000004
+PCFG0                             00000000
+PCFG1                             00000001
+PCFG2                             00000002
+PCFG3                             00000003
+PCL                               00000002
+PCLATH                            0000000A
+PCON                              0000008E
+PEIE                              00000006
+PEN                               00000002
+PIE1                              0000008C
+PIE2                              0000008D
+PIR1                              0000000C
+PIR2                              0000000D
+PORTA                             00000005
+PORTB                             00000006
+PORTC                             00000007
+PORTD                             00000008
+PORTE                             00000009
+PR2                               00000092
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+PSPIE                             00000007
+PSPIF                             00000007
+PSPMODE                           00000004
+R                                 00000002
+RA0                               00000000
+RA1                               00000001
+RA2                               00000002
+RA3                               00000003
+RA4                               00000004
+RA5                               00000005
+RB0                               00000000
+RB1                               00000001
+RB2                               00000002
+MPASM 5.76                    READKEYPAD.ASM   12-8-2017  8:08:42         PAGE  9
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+RB3                               00000003
+RB4                               00000004
+RB5                               00000005
+RB6                               00000006
+RB7                               00000007
+RBIE                              00000003
+RBIF                              00000000
+RC0                               00000000
+RC1                               00000001
+RC2                               00000002
+RC3                               00000003
+RC4                               00000004
+RC5                               00000005
+RC6                               00000006
+RC7                               00000007
+RC8_9                             00000006
+RC9                               00000006
+RCD8                              00000000
+RCEN                              00000003
+RCIE                              00000005
+RCIF                              00000005
+RCREG                             0000001A
+RCSTA                             00000018
+RD                                00000000
+RD0                               00000000
+RD1                               00000001
+RD2                               00000002
+RD3                               00000003
+RD4                               00000004
+RD5                               00000005
+RD6                               00000006
+RD7                               00000007
+RE0                               00000000
+RE1                               00000001
+RE2                               00000002
+READ_WRITE                        00000002
+RP0                               00000005
+RP1                               00000006
+RSEN                              00000001
+RX9                               00000006
+RX9D                              00000000
+R_NOT_W                           00000002
+R_W                               00000002
+S                                 00000003
+SEN                               00000000
+SMP                               00000007
+SPBRG                             00000099
+SPEN                              00000007
+SREN                              00000005
+SSPADD                            00000093
+SSPBUF                            00000013
+SSPCON                            00000014
+SSPCON2                           00000091
+MPASM 5.76                    READKEYPAD.ASM   12-8-2017  8:08:42         PAGE 10
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+SSPEN                             00000005
+SSPIE                             00000003
+SSPIF                             00000003
+SSPM0                             00000000
+SSPM1                             00000001
+SSPM2                             00000002
+SSPM3                             00000003
+SSPOV                             00000006
+SSPSTAT                           00000094
+STATUS                            00000003
+SYNC                              00000004
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+T1CKPS0                           00000004
+T1CKPS1                           00000005
+T1CON                             00000010
+T1INSYNC                          00000002
+T1OSCEN                           00000003
+T1SYNC                            00000002
+T2CKPS0                           00000000
+T2CKPS1                           00000001
+T2CON                             00000012
+TMR0                              00000001
+TMR0IE                            00000005
+TMR0IF                            00000002
+TMR1                              0000000E
+TMR1CS                            00000001
+TMR1H                             0000000F
+TMR1IE                            00000000
+TMR1IF                            00000000
+TMR1L                             0000000E
+TMR1ON                            00000000
+TMR2                              00000011
+TMR2IE                            00000001
+TMR2IF                            00000001
+TMR2ON                            00000002
+TOUTPS0                           00000003
+TOUTPS1                           00000004
+TOUTPS2                           00000005
+TOUTPS3                           00000006
+TRISA                             00000085
+TRISA0                            00000000
+TRISA1                            00000001
+TRISA2                            00000002
+TRISA3                            00000003
+TRISA4                            00000004
+TRISA5                            00000005
+TRISB                             00000086
+TRISB0                            00000000
+TRISB1                            00000001
+TRISB2                            00000002
+MPASM 5.76                    READKEYPAD.ASM   12-8-2017  8:08:42         PAGE 11
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TRISB3                            00000003
+TRISB4                            00000004
+TRISB5                            00000005
+TRISB6                            00000006
+TRISB7                            00000007
+TRISC                             00000087
+TRISC0                            00000000
+TRISC1                            00000001
+TRISC2                            00000002
+TRISC3                            00000003
+TRISC4                            00000004
+TRISC5                            00000005
+TRISC6                            00000006
+TRISC7                            00000007
+TRISD                             00000088
+TRISD0                            00000000
+TRISD1                            00000001
+TRISD2                            00000002
+TRISD3                            00000003
+TRISD4                            00000004
+TRISD5                            00000005
+TRISD6                            00000006
+TRISD7                            00000007
+TRISE                             00000089
+TRISE0                            00000000
+TRISE1                            00000001
+TRISE2                            00000002
+TRMT                              00000001
+TX8_9                             00000006
+TX9                               00000006
+TX9D                              00000000
+TXD8                              00000000
+TXEN                              00000005
+TXIE                              00000004
+TXIF                              00000004
+TXREG                             00000019
+TXSTA                             00000098
+UA                                00000001
+W                                 00000000
+WCOL                              00000007
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_BODEN_OFF                        00003FBF
+_BODEN_ON                         00003FFF
+_BOREN_OFF                        00003FBF
+_BOREN_ON                         00003FFF
+_CONFIG                           00002007
+_CPD_OFF                          00003FFF
+_CPD_ON                           00003EFF
+_CP_ALL                           00001FFF
+_CP_OFF                           00003FFF
+MPASM 5.76                    READKEYPAD.ASM   12-8-2017  8:08:42         PAGE 12
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+_CP_ON                            00001FFF
+_DEBUG_OFF                        00003FFF
+_DEBUG_ON                         000037FF
+_DEVID1                           00002006
+_FOSC_EXTRC                       00003FFF
+_FOSC_HS                          00003FFE
+_FOSC_LP                          00003FFC
+_FOSC_XT                          00003FFD
+_HS_OSC                           00003FFE
+_IDLOC0                           00002000
+_IDLOC1                           00002001
+_IDLOC2                           00002002
+_IDLOC3                           00002003
+_LP_OSC                           00003FFC
+_LVP_OFF                          00003F7F
+_LVP_ON                           00003FFF
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDTE_OFF                         00003FFB
+_WDTE_ON                          00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_WRT_1FOURTH                      00003BFF
+_WRT_256                          00003DFF
+_WRT_HALF                         000039FF
+_WRT_OFF                          00003FFF
+_XT_OSC                           00003FFD
+__16F877A                         00000001
+add                               00000001
+cf1                               00000063
+cf2                               0000006E
+col_find                          0000005C
+convert                           0000002D
+keypad_op                         00000072
+kp1                               00000037
+kp2                               00000042
+kp3                               0000004D
+kp4                               00000058
+kp_table                          000000AC
+kplookup                          000000A2
+kpread                            00000017
+kpreset                           00000086
+loop                              00000007
+pattern                           00000000
+read                              00000000
+rst                               0000007E
+wait                              00000092
+
+Errors   :     0
+Warnings :     1 reported,     0 suppressed
+Messages :     4 reported,     0 suppressed
+
+

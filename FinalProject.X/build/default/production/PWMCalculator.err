@@ -1,0 +1,11 @@
+Warning[205] E:\FINALPROJECT.X\PWMCALCULATOR.ASM 55 : Found directive in column 1. (extern)
+Warning[205] E:\FINALPROJECT.X\PWMCALCULATOR.ASM 56 : Found directive in column 1. (extern)
+Warning[205] E:\FINALPROJECT.X\PWMCALCULATOR.ASM 58 : Found directive in column 1. (GLOBAL)
+Message[302] E:\FINALPROJECT.X\PWMCALCULATOR.ASM 72 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[305] E:\FINALPROJECT.X\PWMCALCULATOR.ASM 83 : Using default destination of 1 (file).
+Message[305] E:\FINALPROJECT.X\PWMCALCULATOR.ASM 89 : Using default destination of 1 (file).
+Message[305] E:\FINALPROJECT.X\PWMCALCULATOR.ASM 94 : Using default destination of 1 (file).
+Message[305] E:\FINALPROJECT.X\PWMCALCULATOR.ASM 124 : Using default destination of 1 (file).
+Message[305] E:\FINALPROJECT.X\PWMCALCULATOR.ASM 125 : Using default destination of 1 (file).
+Message[305] E:\FINALPROJECT.X\PWMCALCULATOR.ASM 126 : Using default destination of 1 (file).
+Warning[205] E:\FINALPROJECT.X\PWMCALCULATOR.ASM 143 : Found directive in column 1. (END)

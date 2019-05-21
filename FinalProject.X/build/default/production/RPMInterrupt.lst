@@ -1,0 +1,716 @@
+MPASM 5.76                  RPMINTERRUPT.ASM   12-8-2017  8:08:43         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;**********************************************************************
+                      00002 ;   This file is a basic code template for object module code         *
+                      00003 ;   generation on the PIC16F877A. This file contains the              *
+                      00004 ;   basic code building blocks to build upon.                         *
+                      00005 ;                                                                     *
+                      00006 ;   Refer to the MPASM User's Guide for additional information on     *
+                      00007 ;   features of the assembler and linker (Document DS33014).          *
+                      00008 ;                                                                     *
+                      00009 ;   Refer to the respective PIC data sheet for additional             *
+                      00010 ;   information on the instruction set.                               *
+                      00011 ;                                                                     *
+                      00012 ;**********************************************************************
+                      00013 ;                                                                     *
+                      00014 ;    Filename:      RPMInterrupt.asm                                  *
+                      00015 ;    Date:          12/06/17                                          *
+                      00016 ;    File Version:  0.0.1                                             *
+                      00017 ;                                                                     *
+                      00018 ;    Author:        Andrew W. Harn                                    *
+                      00019 ;    Company:       Geneva College                                    *
+                      00020 ;                                                                     * 
+                      00021 ;                                                                     *
+                      00022 ;**********************************************************************
+                      00023 ;                                                                     *
+                      00024 ;    Files required: P16F877A.INC                                     *
+                      00025 ;                                                                     *
+                      00026 ;                                                                     *   
+                      00027 ;                                                                     *
+                      00028 ;                                                                     *
+                      00029 ;**********************************************************************
+                      00030 ;                                                                     *
+                      00031 ;    Notes:                                                           *
+                      00032 ;                                                                     *
+                      00033 ;                                                                     *
+                      00034 ;                                                                     *
+                      00035 ;                                                                     *
+                      00036 ;**********************************************************************
+                      00037  
+                      00038         list            p=16F877A
+                      00039         #include        P16F877A.inc
+                      00001         LIST
+                      00002 
+                      00003 ;==========================================================================
+                      00004 ; Build date : Sep 19 2017
+                      00005 ;  MPASM PIC16F877A processor include
+                      00006 ; 
+                      00007 ;  (c) Copyright 1999-2017 Microchip Technology, All rights reserved
+                      00008 ;==========================================================================
+                      00009 
+                      00567         LIST
+                      00040         
+                      00041 ;***** VARIABLE DEFINITIONS (examples)
+                      00042  
+                      00043 ; example of using Shared Uninitialized Data Section
+MPASM 5.76                  RPMINTERRUPT.ASM   12-8-2017  8:08:43         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00044 INT_VAR     UDATA_SHR
+                      00045  
+                      00046 ; example of using Uninitialized Data Section
+                      00047 TEMP_VAR    UDATA           ; explicit address specified is not required
+0000                  00048 Overflow    RES     1
+0001                  00049 RPMHundreds RES     1
+0002                  00050 RPMTens     RES     1
+0003                  00051 RPMOnes     RES     1
+0004                  00052 RPMTenths   RES     1
+0005                  00053 TempCount   RES     1
+                      00054 
+Warning[205]: Found directive in column 1. (extern)
+  0000                00055 extern  t1count             ; Variable - Count of number of times Timer1 has interrupted
+Warning[205]: Found directive in column 1. (extern)
+  0000                00056 extern  i_write             ; Function - Writes instruction to LCD
+Warning[205]: Found directive in column 1. (extern)
+  0000                00057 extern  d_write             ; Function - Writes data to LCD
+Warning[205]: Found directive in column 1. (extern)
+  0000                00058 extern  temp_wr             ; Variable - Data or instruction to write to LCD
+                      00059     
+Warning[205]: Found directive in column 1. (GLOBAL)
+  0000                00060 GLOBAL  Overflow
+                      00061 ;**********************************************************************
+                      00062 
+                      00063 MAIN       CODE
+                      00064 
+0000                  00065 RPMInterrupt
+0000   1283 1303      00066        banksel  TMR0                ; Get Timer 0 value as soon as possible
+0002   0801           00067        movfw    TMR0
+0003   00??           00068        movwf    TempCount
+                      00069        
+0004   ???? ????      00070        banksel  Overflow            ; Save if Timer 0 overflowed as soon as possible
+0006   1000           00071        bcf      Overflow,0
+0007   190B           00072        btfsc    INTCON,2
+0008   1400           00073        bsf      Overflow,0
+                      00074        
+0009   ???? ????      00075        banksel  t1count             ; Increment interrupt counter
+Message[305]: Using default destination of 1 (file).
+000B   0A??           00076        incf     t1count
+                      00077        
+000C   1283 1303      00078        banksel  TMR1H               ; Reset Timer1 value (approx 333ms, if interrupt time included)
+000E   305D           00079        movlw    0x5D
+000F   008F           00080        movwf    TMR1H
+0010   1283 1303      00081        banksel  TMR1L
+0012   3029           00082        movlw    0x29
+0013   008E           00083        movwf    TMR1L
+                      00084        
+0014   1283 1303      00085        banksel  PIR1                ; Clear out Timer 1 interrupt
+0016   100C           00086        bcf      PIR1,0          
+                      00087        
+0017   ???? ????      00088        banksel  t1count
+0019   1D00           00089        btfss    t1count,2           ; If t1count is not 4, return. Otherwise, continue. 
+001A   0008           00090        return
+MPASM 5.76                  RPMINTERRUPT.ASM   12-8-2017  8:08:43         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00091        
+001B   ???? ????      00092        pagesel  RPMCalculator
+001D   2???           00093        call     RPMCalculator
+                      00094        
+001E   ???? ????      00095        pagesel  DisplayRPM
+0020   2???           00096        call     DisplayRPM
+0021   0008           00097        return
+                      00098        
+  0000                00099        GLOBAL RPMInterrupt
+                      00100         
+0022                  00101 RPMCalculator
+0022   1283 1303      00102        banksel  TMR0                ; Clear out Timer 0 and its overflow so it can start counting immedi
+                            ately
+0024   0181           00103        clrf     TMR0
+0025   110B           00104        bcf      INTCON,2
+                      00105        
+0026   ???? ????      00106        banksel  t1count             ; Reset the interrupt counter
+0028   01??           00107        clrf     t1count
+                      00108        
+0029   ???? ????      00109        banksel  RPMHundreds
+002B   01??           00110        clrf     RPMHundreds
+002C   ???? ????      00111        banksel  RPMTens
+002E   01??           00112        clrf     RPMTens
+002F   ???? ????      00113        banksel  RPMOnes
+0031   01??           00114        clrf     RPMOnes
+0032   ???? ????      00115        banksel  RPMTenths
+0034   01??           00116        clrf     RPMTenths
+                      00117        
+0035   1003           00118        bcf      STATUS,C            ; Clear out the carry for the time being.
+0036   1800           00119        btfsc    Overflow,0          ; If Timer0 overflowed, we need a carry.
+0037   1403           00120        bsf      STATUS,C
+                      00121        
+0038   ???? ????      00122        banksel  TempCount
+Message[305]: Using default destination of 1 (file).
+003A   0C??           00123        rrf      TempCount           ; Rotate right to divide by 2
+                      00124        
+003B   ???? ????      00125        banksel  RPMTenths           ; If there is a carry bit, there is half an RPM
+003D   3005           00126        movlw    0x05
+003E   1803           00127        btfsc    STATUS,C
+003F   00??           00128        movwf    RPMTenths
+                      00129        
+0040                  00130 Hundreds
+0040   ???? ????      00131        banksel  TempCount           ; If 100 can be subtracted, goto AddHundreds
+0042   3064           00132        movlw    d'100'
+0043   02??           00133        subwf    TempCount,0
+0044   ???? ????      00134        pagesel  AddHundreds
+0046   1803           00135        btfsc    STATUS,C
+0047   2???           00136        goto     AddHundreds
+                      00137        
+0048                  00138 Tens                                ; If 10 can be subtracted, goto AddTens
+0048   ???? ????      00139        banksel  TempCount
+004A   300A           00140        movlw    d'10'
+004B   02??           00141        subwf    TempCount,0
+MPASM 5.76                  RPMINTERRUPT.ASM   12-8-2017  8:08:43         PAGE  4
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+004C   ???? ????      00142        pagesel  AddTens
+004E   1803           00143        btfsc    STATUS,C
+004F   2???           00144        goto     AddTens
+                      00145        
+0050                  00146 Ones                                ; Remaining are ones. Move that to RPMOnes
+0050   ???? ????      00147        banksel  TempCount
+0052   08??           00148        movfw    TempCount
+0053   ???? ????      00149        banksel  RPMOnes
+0055   00??           00150        movwf    RPMOnes
+                      00151        
+0056   0008           00152        return
+                      00153        
+0057                  00154 AddHundreds                         ; Add 1 to the hundreds place, subtract 100 from TempCount
+0057   ???? ????      00155        banksel  RPMHundreds
+Message[305]: Using default destination of 1 (file).
+0059   0A??           00156        incf     RPMHundreds
+005A   ???? ????      00157        banksel  TempCount
+005C   3064           00158        movlw    d'100'
+005D   02??           00159        subwf    TempCount,1
+005E   ???? ????      00160        pagesel  Hundreds
+0060   2???           00161        goto     Hundreds
+                      00162        
+0061                  00163 AddTens                             ; Add 1 to the tens place, subtract 10 from TempCount
+0061   ???? ????      00164        banksel  RPMTens
+Message[305]: Using default destination of 1 (file).
+0063   0A??           00165        incf     RPMTens
+0064   ???? ????      00166        banksel  TempCount
+0066   300A           00167        movlw    d'10'
+0067   02??           00168        subwf    TempCount,1
+0068   ???? ????      00169        pagesel  Tens
+006A   2???           00170        goto     Tens
+                      00171        
+006B                  00172 DisplayRPM
+006B   ???? ????      00173        banksel  temp_wr
+006D   ???? ????      00174        pagesel  i_write
+006F   30C6           00175        movlw    0xC6                ; Move cursor to bottom line, first position
+0070   00??           00176        movwf    temp_wr
+0071   2???           00177        call     i_write
+                      00178        
+0072                  00179 DisplayHundreds                     ; Write the hundreds value
+0072   ???? ????      00180        banksel  RPMHundreds
+0074   08??           00181        movfw    RPMHundreds
+0075   ???? ????      00182        pagesel  SkipableTens
+0077   1903           00183        btfsc    STATUS,Z
+0078   2???           00184        goto     SkipableTens        ; Skip Hundreds if there are none
+                      00185        
+0079   3830           00186        iorlw    0x30                ; Don't skip if there is a value
+007A   ???? ????      00187        banksel  temp_wr
+007C   00??           00188        movwf    temp_wr
+007D   2???           00189        call     d_write
+007E   ???? ????      00190        pagesel  DisplayTens
+0080   2???           00191        goto     DisplayTens
+                      00192        
+MPASM 5.76                  RPMINTERRUPT.ASM   12-8-2017  8:08:43         PAGE  5
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0081                  00193 SkipableTens                        ; Hundreds were skipped, tens skippable
+0081   ???? ????      00194        banksel  RPMTens
+0083   08??           00195        movfw    RPMTens             
+0084   ???? ????      00196        pagesel  DisplayOnes
+0086   1903           00197        btfsc    STATUS,Z
+0087   2???           00198        goto     DisplayOnes         
+                      00199 
+0088                  00200 DisplayTens                         ; Tens has value or hundreds not skipped
+0088   ???? ????      00201        banksel  RPMTens
+008A   08??           00202        movfw    RPMTens
+008B   3830           00203        iorlw    0x30
+008C   ???? ????      00204        banksel  temp_wr
+008E   00??           00205        movwf    temp_wr
+008F   ???? ????      00206        pagesel  d_write
+0091   2???           00207        call     d_write
+                      00208        
+0092                  00209 DisplayOnes
+0092   ???? ????      00210        banksel  RPMOnes
+0094   08??           00211        movfw    RPMOnes             ; Write the ones value
+0095   3830           00212        iorlw    0x30
+0096   ???? ????      00213        banksel  temp_wr
+0098   00??           00214        movwf    temp_wr
+0099   ???? ????      00215        pagesel  d_write
+009B   2???           00216        call     d_write
+                      00217        
+009C   302E           00218        movlw    '.'                 ; Insert the period
+009D   00??           00219        movwf    temp_wr
+009E   2???           00220        call     d_write
+                      00221        
+009F                  00222 DisplayTenths
+009F   ???? ????      00223        banksel  RPMTenths           ; Write the tenths value
+00A1   08??           00224        movfw    RPMTenths
+00A2   3830           00225        iorlw    0x30
+00A3   ???? ????      00226        banksel  temp_wr
+00A5   00??           00227        movwf    temp_wr
+00A6   2???           00228        call     d_write
+                      00229        
+00A7                  00230 ClearReturn
+00A7   ???? ????      00231        banksel  temp_wr
+00A9   3020           00232        movlw    ' '
+00AA   00??           00233        movwf    temp_wr
+00AB   2???           00234        call     d_write
+00AC   2???           00235        call     d_write
+                      00236        
+00AD   ???? ????      00237        pagesel  i_write             ; Move the cursor back
+00AF   3090           00238        movlw    0x90
+00B0   00??           00239        movwf    temp_wr
+00B1   2???           00240        call     i_write
+00B2   0008           00241        return
+                      00242        END
+MPASM 5.76                  RPMINTERRUPT.ASM   12-8-2017  8:08:43         PAGE  6
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+ACKDT                             00000005
+ACKEN                             00000004
+ACKSTAT                           00000006
+ADCON0                            0000001F
+ADCON1                            0000009F
+ADCS0                             00000006
+ADCS1                             00000007
+ADCS2                             00000006
+ADDEN                             00000003
+ADFM                              00000007
+ADIE                              00000006
+ADIF                              00000006
+ADON                              00000000
+ADRESH                            0000001E
+ADRESL                            0000009E
+AddHundreds                       00000057
+AddTens                           00000061
+BCLIE                             00000003
+BCLIF                             00000003
+BF                                00000000
+BRGH                              00000002
+C                                 00000000
+C1INV                             00000004
+C1OUT                             00000006
+C2INV                             00000005
+C2OUT                             00000007
+CCP1CON                           00000017
+CCP1IE                            00000002
+CCP1IF                            00000002
+CCP1M0                            00000000
+CCP1M1                            00000001
+CCP1M2                            00000002
+CCP1M3                            00000003
+CCP1X                             00000005
+CCP1Y                             00000004
+CCP2CON                           0000001D
+CCP2IE                            00000000
+CCP2IF                            00000000
+CCP2M0                            00000000
+CCP2M1                            00000001
+CCP2M2                            00000002
+CCP2M3                            00000003
+CCP2X                             00000005
+CCP2Y                             00000004
+CCPR1                             00000015
+CCPR1H                            00000016
+CCPR1L                            00000015
+CCPR2                             0000001B
+CCPR2H                            0000001C
+CCPR2L                            0000001B
+CHS0                              00000003
+CHS1                              00000004
+CHS2                              00000005
+MPASM 5.76                  RPMINTERRUPT.ASM   12-8-2017  8:08:43         PAGE  7
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+CIS                               00000003
+CKE                               00000006
+CKP                               00000004
+CM0                               00000000
+CM1                               00000001
+CM2                               00000002
+CMCON                             0000009C
+CMIE                              00000006
+CMIF                              00000006
+CREN                              00000004
+CSRC                              00000007
+CVR0                              00000000
+CVR1                              00000001
+CVR2                              00000002
+CVR3                              00000003
+CVRCON                            0000009D
+CVREN                             00000007
+CVROE                             00000006
+CVRR                              00000005
+ClearReturn                       000000A7
+D                                 00000005
+DATA_ADDRESS                      00000005
+DC                                00000001
+D_A                               00000005
+D_NOT_A                           00000005
+DisplayHundreds                   00000072
+DisplayOnes                       00000092
+DisplayRPM                        0000006B
+DisplayTens                       00000088
+DisplayTenths                     0000009F
+EEADR                             0000010D
+EEADRH                            0000010F
+EECON1                            0000018C
+EECON2                            0000018D
+EEDATA                            0000010C
+EEDATH                            0000010E
+EEIE                              00000004
+EEIF                              00000004
+EEPGD                             00000007
+F                                 00000001
+FERR                              00000002
+FSR                               00000004
+GCEN                              00000007
+GIE                               00000007
+GO                                00000002
+GO_DONE                           00000002
+GO_NOT_DONE                       00000002
+Hundreds                          00000040
+I2C_DATA                          00000005
+I2C_READ                          00000002
+I2C_START                         00000003
+I2C_STOP                          00000004
+IBF                               00000007
+MPASM 5.76                  RPMINTERRUPT.ASM   12-8-2017  8:08:43         PAGE  8
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+IBOV                              00000005
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+NOT_A                             00000005
+NOT_ADDRESS                       00000005
+NOT_BO                            00000000
+NOT_BOR                           00000000
+NOT_DONE                          00000002
+NOT_PD                            00000003
+NOT_POR                           00000001
+NOT_RBPU                          00000007
+NOT_RC8                           00000006
+NOT_T1SYNC                        00000002
+NOT_TO                            00000004
+NOT_TX8                           00000006
+NOT_W                             00000002
+NOT_WRITE                         00000002
+OBF                               00000006
+OERR                              00000001
+OPTION_REG                        00000081
+Ones                              00000050
+Overflow                          00000000
+P                                 00000004
+PCFG0                             00000000
+PCFG1                             00000001
+PCFG2                             00000002
+PCFG3                             00000003
+PCL                               00000002
+PCLATH                            0000000A
+PCON                              0000008E
+PEIE                              00000006
+PEN                               00000002
+PIE1                              0000008C
+PIE2                              0000008D
+PIR1                              0000000C
+PIR2                              0000000D
+PORTA                             00000005
+PORTB                             00000006
+PORTC                             00000007
+PORTD                             00000008
+PORTE                             00000009
+PR2                               00000092
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+PSPIE                             00000007
+PSPIF                             00000007
+PSPMODE                           00000004
+MPASM 5.76                  RPMINTERRUPT.ASM   12-8-2017  8:08:43         PAGE  9
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+R                                 00000002
+RA0                               00000000
+RA1                               00000001
+RA2                               00000002
+RA3                               00000003
+RA4                               00000004
+RA5                               00000005
+RB0                               00000000
+RB1                               00000001
+RB2                               00000002
+RB3                               00000003
+RB4                               00000004
+RB5                               00000005
+RB6                               00000006
+RB7                               00000007
+RBIE                              00000003
+RBIF                              00000000
+RC0                               00000000
+RC1                               00000001
+RC2                               00000002
+RC3                               00000003
+RC4                               00000004
+RC5                               00000005
+RC6                               00000006
+RC7                               00000007
+RC8_9                             00000006
+RC9                               00000006
+RCD8                              00000000
+RCEN                              00000003
+RCIE                              00000005
+RCIF                              00000005
+RCREG                             0000001A
+RCSTA                             00000018
+RD                                00000000
+RD0                               00000000
+RD1                               00000001
+RD2                               00000002
+RD3                               00000003
+RD4                               00000004
+RD5                               00000005
+RD6                               00000006
+RD7                               00000007
+RE0                               00000000
+RE1                               00000001
+RE2                               00000002
+READ_WRITE                        00000002
+RP0                               00000005
+RP1                               00000006
+RPMCalculator                     00000022
+RPMHundreds                       00000001
+RPMInterrupt                      00000000
+RPMOnes                           00000003
+RPMTens                           00000002
+MPASM 5.76                  RPMINTERRUPT.ASM   12-8-2017  8:08:43         PAGE 10
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+RPMTenths                         00000004
+RSEN                              00000001
+RX9                               00000006
+RX9D                              00000000
+R_NOT_W                           00000002
+R_W                               00000002
+S                                 00000003
+SEN                               00000000
+SMP                               00000007
+SPBRG                             00000099
+SPEN                              00000007
+SREN                              00000005
+SSPADD                            00000093
+SSPBUF                            00000013
+SSPCON                            00000014
+SSPCON2                           00000091
+SSPEN                             00000005
+SSPIE                             00000003
+SSPIF                             00000003
+SSPM0                             00000000
+SSPM1                             00000001
+SSPM2                             00000002
+SSPM3                             00000003
+SSPOV                             00000006
+SSPSTAT                           00000094
+STATUS                            00000003
+SYNC                              00000004
+SkipableTens                      00000081
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+T1CKPS0                           00000004
+T1CKPS1                           00000005
+T1CON                             00000010
+T1INSYNC                          00000002
+T1OSCEN                           00000003
+T1SYNC                            00000002
+T2CKPS0                           00000000
+T2CKPS1                           00000001
+T2CON                             00000012
+TMR0                              00000001
+TMR0IE                            00000005
+TMR0IF                            00000002
+TMR1                              0000000E
+TMR1CS                            00000001
+TMR1H                             0000000F
+TMR1IE                            00000000
+TMR1IF                            00000000
+TMR1L                             0000000E
+TMR1ON                            00000000
+TMR2                              00000011
+TMR2IE                            00000001
+MPASM 5.76                  RPMINTERRUPT.ASM   12-8-2017  8:08:43         PAGE 11
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TMR2IF                            00000001
+TMR2ON                            00000002
+TOUTPS0                           00000003
+TOUTPS1                           00000004
+TOUTPS2                           00000005
+TOUTPS3                           00000006
+TRISA                             00000085
+TRISA0                            00000000
+TRISA1                            00000001
+TRISA2                            00000002
+TRISA3                            00000003
+TRISA4                            00000004
+TRISA5                            00000005
+TRISB                             00000086
+TRISB0                            00000000
+TRISB1                            00000001
+TRISB2                            00000002
+TRISB3                            00000003
+TRISB4                            00000004
+TRISB5                            00000005
+TRISB6                            00000006
+TRISB7                            00000007
+TRISC                             00000087
+TRISC0                            00000000
+TRISC1                            00000001
+TRISC2                            00000002
+TRISC3                            00000003
+TRISC4                            00000004
+TRISC5                            00000005
+TRISC6                            00000006
+TRISC7                            00000007
+TRISD                             00000088
+TRISD0                            00000000
+TRISD1                            00000001
+TRISD2                            00000002
+TRISD3                            00000003
+TRISD4                            00000004
+TRISD5                            00000005
+TRISD6                            00000006
+TRISD7                            00000007
+TRISE                             00000089
+TRISE0                            00000000
+TRISE1                            00000001
+TRISE2                            00000002
+TRMT                              00000001
+TX8_9                             00000006
+TX9                               00000006
+TX9D                              00000000
+TXD8                              00000000
+TXEN                              00000005
+TXIE                              00000004
+TXIF                              00000004
+TXREG                             00000019
+MPASM 5.76                  RPMINTERRUPT.ASM   12-8-2017  8:08:43         PAGE 12
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TXSTA                             00000098
+TempCount                         00000005
+Tens                              00000048
+UA                                00000001
+W                                 00000000
+WCOL                              00000007
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_BODEN_OFF                        00003FBF
+_BODEN_ON                         00003FFF
+_BOREN_OFF                        00003FBF
+_BOREN_ON                         00003FFF
+_CONFIG                           00002007
+_CPD_OFF                          00003FFF
+_CPD_ON                           00003EFF
+_CP_ALL                           00001FFF
+_CP_OFF                           00003FFF
+_CP_ON                            00001FFF
+_DEBUG_OFF                        00003FFF
+_DEBUG_ON                         000037FF
+_DEVID1                           00002006
+_FOSC_EXTRC                       00003FFF
+_FOSC_HS                          00003FFE
+_FOSC_LP                          00003FFC
+_FOSC_XT                          00003FFD
+_HS_OSC                           00003FFE
+_IDLOC0                           00002000
+_IDLOC1                           00002001
+_IDLOC2                           00002002
+_IDLOC3                           00002003
+_LP_OSC                           00003FFC
+_LVP_OFF                          00003F7F
+_LVP_ON                           00003FFF
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDTE_OFF                         00003FFB
+_WDTE_ON                          00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_WRT_1FOURTH                      00003BFF
+_WRT_256                          00003DFF
+_WRT_HALF                         000039FF
+_WRT_OFF                          00003FFF
+_XT_OSC                           00003FFD
+__16F877A                         00000001
+d_write                           00000000
+i_write                           00000000
+t1count                           00000000
+temp_wr                           00000000
+
+MPASM 5.76                  RPMINTERRUPT.ASM   12-8-2017  8:08:43         PAGE 13
+
+
+
+
+
+Errors   :     0
+Warnings :     5 reported,     0 suppressed
+Messages :     4 reported,     0 suppressed
+
+
